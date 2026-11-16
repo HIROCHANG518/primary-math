@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小学数学 1-6 年级 · 知识纲要与闯关练习</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f4f6fb;--card:#fff;--ink:#1b2333;--muted:#6c7789;--line:#e5e9f2;
+  --accent:#3b4a6b;--accent-soft:color-mix(in srgb,var(--accent) 12%,#fff);
+  --ok:#2fa86b;--bad:#e05656;--r:16px;
+}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.55;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+
+/* ---------- hero ---------- */
+.hero{background:linear-gradient(180deg,#fff 0%,#f7f9fd 100%);border-bottom:1px solid var(--line);position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 35%,#fff))}
+.hero-inner{padding:34px 0 22px}
+.badge{display:inline-block;font-size:12px;letter-spacing:.12em;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:5px 12px;margin-bottom:12px}
+h1{font-size:clamp(26px,4vw,38px);margin:0 0 10px;letter-spacing:-.02em;font-weight:800}
+h1 em{font-style:normal;color:var(--accent)}
+.lead{margin:0;color:var(--muted);font-size:15px;max-width:640px}
+.hero-stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 16px;display:flex;align-items:baseline;gap:7px}
+.stat b{font-size:19px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+
+/* ---------- grade tabs ---------- */
+.grades{display:flex;gap:8px;overflow-x:auto;padding:16px 0 4px;scrollbar-width:none}
+.grades::-webkit-scrollbar{display:none}
+.gtab{flex:0 0 auto;padding:9px 17px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:600;font-size:14px;cursor:pointer;transition:.18s;font-family:inherit}
+.gtab:hover{border-color:var(--accent);color:var(--accent)}
+.gtab.on{background:var(--accent);color:#fff;border-color:transparent;box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 32%,transparent)}
+
+/* ---------- layout ---------- */
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.02fr);gap:18px;align-items:start;padding:14px 0 40px}
+body[data-view="overview"] main{grid-template-columns:1fr}
+body[data-view="overview"] .practice{display:none}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 18px 16px;box-shadow:0 1px 2px rgba(20,30,60,.03)}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.panel-h h2{font-size:16px;margin:0;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.panel-h h2::before{content:"";width:4px;height:15px;border-radius:2px;background:var(--accent)}
+.practice{position:sticky;top:16px}
+
+/* 搜索 */
+.search{width:100%;border:1px solid var(--line);background:#fbfcfe;border-radius:10px;padding:9px 12px;font-size:13.5px;font-family:inherit;color:inherit;outline:none;margin-bottom:14px;transition:.15s}
+.search:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
+
+/* 书册 */
+.book{margin-bottom:16px}
+.book-h{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted);margin:0 0 8px 2px;display:flex;align-items:center;gap:8px}
+.book-h::after{content:"";flex:1;height:1px;background:var(--line)}
+.unit{border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:7px;overflow:hidden}
+.unit summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center;font-weight:600;font-size:14px;transition:.15s}
+.unit summary:hover{background:#fafbfe}
+.unit summary::-webkit-details-marker{display:none}
+.unit summary .uc{font-size:11.5px;font-weight:500;color:var(--muted);flex:0 0 auto;margin-right:4px}
+.unit summary::after{content:"+";color:var(--muted);font-weight:700;font-size:15px;line-height:1}
+.unit[open] summary::after{content:"–"}
+.unit[open] summary{background:#fafbfe;color:var(--accent)}
+.unit ul{margin:0;padding:4px 18px 13px 30px;color:#3d4759;font-size:13.5px;line-height:1.8}
+.unit li{margin:1px 0}
+.unit li::marker{color:color-mix(in srgb,var(--accent) 55%,#fff)}
+
+/* roadmap */
+body[data-view="overview"] #outline{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:720px){body[data-view="overview"] #outline{grid-template-columns:1fr}}
+.rm{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:13px 15px;margin-bottom:10px;cursor:pointer;transition:.18s;background:#fff}
+body[data-view="overview"] .rm{margin-bottom:0}
+.rm:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(25,40,80,.08);border-color:color-mix(in srgb,var(--c) 40%,#fff)}
+.rm-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.rm-h b{font-size:15px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:0 0 auto}
+.rm-core{font-size:12.5px;color:var(--muted)}
+.rm-bands{display:flex;flex-wrap:wrap;gap:6px}
+.rm-bands span{font-size:12px;padding:3px 9px;border-radius:7px;background:#f5f7fb;color:#465268;border:1px solid #eef1f8}
+
+/* ---------- 练习 ---------- */
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.chip{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:9px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:transparent;color:#fff}
+.meter{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:7px;background:#f5f7fb;color:#59647a;font-variant-numeric:tabular-nums}
+.pill.hot{background:#fff4e8;color:#c97516}
+
+.quiz{min-height:250px;position:relative}
+.qhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.qtag{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.03em}
+.skip{background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;padding:2px 4px;border-radius:6px}
+.skip:hover{color:var(--accent);background:var(--accent-soft)}
+.qtext{font-size:clamp(22px,3.2vw,30px);font-weight:800;letter-spacing:.01em;text-align:center;padding:22px 8px 24px;line-height:1.5;animation:pop .28s ease}
+@keyframes pop{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{padding:15px 10px;border-radius:13px;border:1.5px solid var(--line);background:#fff;font-size:22px;font-weight:700;cursor:pointer;transition:.13s;font-family:inherit;color:var(--ink);text-align:center}
+.opt:hover:not(.done){border-color:var(--accent);background:var(--accent-soft)}
+.opt.ok{border-color:var(--ok);background:#eaf8f0;color:#1b7a4c}
+.opt.bad{border-color:var(--bad);background:#fdeeee;color:#b93b3b}
+.opt.done{cursor:default}
+.opt.md{font-size:19px}
+.opt.sm{font-size:16.5px}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;line-height:1.06;font-size:.8em;font-weight:700}
+.fr i{font-style:normal;padding:0 4px}
+.fr i:first-child{border-bottom:1.6px solid currentColor}
+
+.fb{margin-top:14px;font-size:13.5px;border-radius:11px;padding:12px 14px;display:none;animation:pop .2s}
+.fb.show{display:block}
+.fb.good{background:#eef9f3;border:1px solid #cdecd9;color:#1b6b45}
+.fb.bad{background:#fdf0f0;border:1px solid #f6d8d8;color:#9c3838}
+.fb b{font-weight:800}
+.fb .next{margin-top:9px;display:inline-block;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.fb .next:hover{filter:brightness(1.06)}
+
+footer{border-top:1px solid var(--line);padding:18px 0 34px;color:var(--muted);font-size:12.5px;text-align:center}
+
+@media (max-width:900px){
+  main{grid-template-columns:1fr}
+  .practice{position:static;order:-1}
+}
+@media (max-width:520px){
+  .hero-inner{padding:26px 0 16px}
+  .panel{padding:15px}
+  .opt{font-size:19px;padding:13px 8px}
+  .stat{padding:6px 12px}
+}
+</style>
+</head>
+<body data-view="overview">
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="badge">1 – 6 年级 · 人教版</div>
+    <h1>小学数学知识<em>纲要</em>与闯关</h1>
+    <p class="lead">六个年级、四个领域（数与代数 / 图形与几何 / 统计与概率 / 综合与实践）的完整知识脉络，配即时判题的闯关练习。竖式计算另有<a href="vertical.html" style="color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;font-weight:700">阶梯闯关版</a>（连对 10 题解锁下一阶梯）。</p>
+    <div class="hero-stats" id="heroStats"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="grades" id="gradeTabs"></nav>
+</div>
+
+<main class="wrap">
+  <section class="panel">
+    <div class="panel-h">
+      <h2 id="outlineTitle">六个年级的主线</h2>
+      <span class="qtag" id="unitCount"></span>
+    </div>
+    <input class="search" id="search" placeholder="搜索知识点，例如：分数、面积、方程、余数" autocomplete="off">
+    <div id="outline"></div>
+  </section>
+
+  <section class="panel practice">
+    <div class="panel-h">
+      <h2>闯关练习</h2>
+      <div class="meter" id="meter"></div>
+    </div>
+    <div class="chips" id="topics"></div>
+    <div class="quiz" id="quiz"></div>
+  </section>
+</main>
+
+<footer>纲要按人教版（部编）教材单元顺序整理 · 各版本单元名称略有差异，知识点一致 · 键盘 1–4 选答案、Enter 下一题 · 成绩只保存在本机浏览器</footer>
+
+<script>
+/* =========================================================
+   1. 大纲数据
+   ========================================================= */
+const DATA = [
+{
+  g:1, name:'一年级', color:'#f4874b',
+  ov:{ core:'从"数一数"到 20 以内加减法', bands:['20 以内加减','100 以内数的认识','图形初步认识','钟表 · 人民币'] },
+  books:[
+    {term:'上册', units:[
+      {t:'准备课', p:['数一数：按顺序点数 1~10，手口一致','比多少：一一对应，多、少、同样多']},
+      {t:'位置', p:['上、下、前、后','左、右：以自己或他人为参照','用"第几"描述排列中的位置']},
+      {t:'1~5 的认识和加减法', p:['1~5 各数的认、读、写','比大小：>、<、=','第几与基数、序数的区别','分与合：5 以内数的组成','加法的意义（合并）、减法的意义（去掉）','0 的认识与 0 的加减']},
+      {t:'认识图形（一）', p:['长方体、正方体、圆柱、球','按形状给实物分类','从实物中抽象出立体图形']},
+      {t:'6~10 的认识和加减法', p:['6~10 的顺序、大小、组成','10 的分与合（凑十的基础）','一图四式：两道加、两道减','连加、连减','加减混合运算']},
+      {t:'11~20 各数的认识', p:['数位：十位、个位','1 个十和几个一合起来是十几','20 以内数的顺序与大小比较','10 加几、十几减几（不借位）']},
+      {t:'认识钟表', p:['时针、分针、秒针的外形区别','整时的认读与记录（8:00）','快几时了、几时刚过']},
+      {t:'20 以内的进位加法', p:['凑十法：9 加几、8 加几','交换加数位置，和不变','用加法解决"一共有多少"']}
+    ]},
+    {term:'下册', units:[
+      {t:'认识图形（二）', p:['长方形、正方形、三角形、圆、平行四边形','平面图形的拼组与分割','七巧板拼图']},
+      {t:'20 以内的退位减法', p:['破十法：13 − 9 = 10 − 9 + 3','平十法：连减两次','想加算减','十几减 9、8、7、6、5 的口算']},
+      {t:'分类与整理', p:['按单一标准分类','象形统计图、简单统计表','从统计图中读出数量']},
+      {t:'100 以内数的认识', p:['一个一个数、十个十个数','数的组成：几个十和几个一','读法与写法、数位顺序','比较大小、多得多 / 少一些','整十数加一位数及相应减法']},
+      {t:'认识人民币', p:['元、角、分及其面值','1 元 = 10 角，1 角 = 10 分','简单的购物计算与找零']},
+      {t:'100 以内的加法和减法（一）', p:['整十数加、减整十数','两位数加一位数、整十数（口算）','两位数减一位数、整十数（口算）','小括号的作用']},
+      {t:'找规律', p:['图形按规律排列（循环、递增）','数字排列规律','按规律接着画、接着填']}
+    ]}
+  ]
+},
+{
+  g:2, name:'二年级', color:'#d9a02a',
+  ov:{ core:'从加减到乘除：表内乘除法成为核心工具', bands:['表内乘除','万以内数','角与图形运动','长度 · 质量单位'] },
+  books:[
+    {term:'上册', units:[
+      {t:'长度单位', p:['厘米、米的认识与量法','1 米 = 100 厘米','用尺子量线段、画线段','估测长度、选择合适的单位']},
+      {t:'100 以内的加法和减法（二）', p:['竖式计算：相同数位对齐','进位加、退位减','连加、连减、加减混合','求比一个数多几 / 少几的数']},
+      {t:'角的初步认识', p:['角有 1 个顶点、2 条边','直角、锐角、钝角','用三角尺判断和画直角','角的大小与边的长短无关']},
+      {t:'表内乘法（一）', p:['乘法的意义：求几个相同加数的和','乘法算式与各部分名称','2~6 的乘法口诀','乘加、乘减']},
+      {t:'观察物体（一）', p:['从前面、侧面、上面观察物体','不同位置看到的形状不同']},
+      {t:'表内乘法（二）', p:['7、8、9 的乘法口诀','用口诀计算与解决问题','求"几个几"是多少']},
+      {t:'认识时间', p:['时、分的关系：1 时 = 60 分','5 分 5 分地数格子','几时几分的认读与记录']},
+      {t:'数学广角——搭配（一）', p:['用 3 个数字组两位数','简单的组合问题','有序思考，不重不漏']}
+    ]},
+    {term:'下册', units:[
+      {t:'数据收集整理', p:['调查法收集数据','用"正"字记录','统计表与简单分析']},
+      {t:'表内除法（一）', p:['平均分的含义','除法的意义、算式各部分名称','用 2~6 的口诀求商','用除法解决平均分问题']},
+      {t:'图形的运动（一）', p:['轴对称图形与对称轴','平移：方向不变、位置变','旋转：绕点转动']},
+      {t:'表内除法（二）', p:['用 7~9 的口诀求商','一句口诀算两道除法','解决"每份几个、能分几份"']},
+      {t:'混合运算', p:['同级运算从左往右','先乘除后加减','有小括号先算括号里']},
+      {t:'有余数的除法', p:['余数的意义，余数必须小于除数','有余数除法的竖式','用余数解决周期排列问题']},
+      {t:'万以内数的认识', p:['千、百、十、个的数位顺序','读写中间或末尾有 0 的数','比较大小、近似数','整百整千的加减']},
+      {t:'克和千克', p:['1 千克 = 1000 克','用秤称量、读数','估重与单位选择']},
+      {t:'数学广角——推理', p:['排除法推理','列表整理条件','简单逻辑判断']}
+    ]}
+  ]
+},
+{
+  g:3, name:'三年级', color:'#3f8fd4',
+  ov:{ core:'数域扩展到万、分数与小数，开始学周长和面积', bands:['多位数乘除','分数小数初步','周长与面积','年月日 · 单位换算'] },
+  books:[
+    {term:'上册', units:[
+      {t:'时分秒', p:['秒的认识，1 分 = 60 秒','时、分、秒之间的换算','计算经过的时间']},
+      {t:'万以内的加法和减法', p:['三位数加减的笔算（连续进位、退位）','加法的验算、减法的验算','估算与精确计算的选择']},
+      {t:'测量', p:['毫米、分米的认识','1 厘米 = 10 毫米，1 分米 = 10 厘米','千米、吨的认识','单位换算与合理选择单位']},
+      {t:'倍的认识', p:['倍的含义：几个几','求一个数是另一个数的几倍（除法）','求一个数的几倍是多少（乘法）']},
+      {t:'多位数乘一位数', p:['整十整百数乘一位数的口算','笔算乘法（进位）','0 的乘法规律','乘法估算']},
+      {t:'长方形和正方形', p:['长方形、正方形的特征','周长的含义','长方形周长 =（长 + 宽）× 2','正方形周长 = 边长 × 4']},
+      {t:'分数的初步认识', p:['几分之一的含义','几分之几与分数各部分名称','同分母分数比较大小','同分母分数加减法','求一个数的几分之一是多少']},
+      {t:'数学广角——集合', p:['重叠问题','用韦恩图表示两类事物','容斥思想初步']}
+    ]},
+    {term:'下册', units:[
+      {t:'位置与方向（一）', p:['东、南、西、北','东北、东南、西北、西南','看简单的路线图并描述行走路线']},
+      {t:'除数是一位数的除法', p:['口算除法','笔算除法（从高位除起）','商中间或末尾有 0 的除法','用乘法验算除法']},
+      {t:'复式统计表', p:['把两个单式统计表合并','表头与数据的对应','从复式统计表分析问题']},
+      {t:'两位数乘两位数', p:['口算与估算','笔算：先分后合','解决连乘问题']},
+      {t:'面积', p:['面积的含义与面积单位','1 平方分米 = 100 平方厘米','长方形面积 = 长 × 宽','正方形面积 = 边长 × 边长','面积与周长的区别','1 平方米 = 100 平方分米']},
+      {t:'年月日', p:['大月 31 天、小月 30 天、二月特殊','平年 365 天、闰年 366 天','判断平年闰年的方法','24 时计时法','计算经过的天数']},
+      {t:'小数的初步认识', p:['一位小数的读写与含义','以元、米为单位的小数','比较小数大小','简单的小数加减法']},
+      {t:'数学广角——搭配（二）', p:['排列与组合的区别','有序枚举，不重不漏','握手、搭配衣服等问题']}
+    ]}
+  ]
+},
+{
+  g:4, name:'四年级', color:'#7c6bd6',
+  ov:{ core:'大数与小数、运算定律、图形分类，开始严格的几何度量', bands:['大数的认识','四则运算与定律','小数意义与加减','三角形 · 平行四边形'] },
+  books:[
+    {term:'上册', units:[
+      {t:'大数的认识', p:['万级、亿级与数位顺序表','亿以内数的读写','改写为"万""亿"作单位','求近似数（四舍五入）','数的产生与十进制计数法']},
+      {t:'公顷和平方千米', p:['1 公顷 = 10000 平方米','1 平方千米 = 100 公顷','大面积单位的实际感知']},
+      {t:'角的度量', p:['直线、射线、线段的区别','量角器的使用与读角','锐角、直角、钝角、平角、周角','画指定度数的角']},
+      {t:'三位数乘两位数', p:['笔算方法：分步乘再相加','因数中间或末尾有 0','积的变化规律','单价 × 数量 = 总价','速度 × 时间 = 路程']},
+      {t:'平行四边形和梯形', p:['平行与垂直的含义','画垂线、画平行线','点到直线的距离','平行四边形的特征与高','梯形的特征、等腰梯形']},
+      {t:'除数是两位数的除法', p:['用"四舍五入"试商','商一位数、两位数的情况','商不变的规律','商的变化规律']},
+      {t:'条形统计图', p:['1 格表示多个单位','绘制与分析条形统计图','根据数据作出判断']},
+      {t:'数学广角——优化', p:['沏茶问题：合理安排顺序','烙饼问题：同时烙最省时','田忌赛马：对策论初步']}
+    ]},
+    {term:'下册', units:[
+      {t:'四则运算', p:['同级运算的顺序','含两级运算的顺序','括号的作用（小括号、中括号）','有关 0 的运算']},
+      {t:'观察物体（二）', p:['从不同方向观察由小正方体搭成的立体','根据视图想象立体图形']},
+      {t:'运算定律', p:['加法交换律、结合律','乘法交换律、结合律','乘法分配律','用定律进行简便计算']},
+      {t:'小数的意义和性质', p:['小数的计数单位与数位','小数的性质：末尾添 0 去 0 大小不变','小数点移动引起大小变化','单位换算（低级↔高级）','求小数的近似数']},
+      {t:'三角形', p:['三角形的特性：稳定性','三角形三边关系','三角形的内角和是 180°','按角、按边分类']},
+      {t:'小数的加法和减法', p:['小数点对齐（数位对齐）','小数加减的笔算与验算','整数运算定律推广到小数']},
+      {t:'图形的运动（二）', p:['轴对称图形的性质','补全轴对称图形','图形的平移与画法']},
+      {t:'平均数与条形统计图', p:['平均数的意义与求法','平均数易受极端值影响','复式条形统计图']},
+      {t:'数学广角——鸡兔同笼', p:['假设法解题','列表法','用方程思想解决']}
+    ]}
+  ]
+},
+{
+  g:5, name:'五年级', color:'#d4568f',
+  ov:{ core:'小数乘除、方程、因数倍数与分数，抽象程度明显上升', bands:['小数乘除','简易方程','因数与倍数','多边形面积 · 分数加减'] },
+  books:[
+    {term:'上册', units:[
+      {t:'小数乘法', p:['小数乘整数、小数乘小数','积的小数位数规律','积的近似数','整数乘法运算律推广到小数','分段计费问题']},
+      {t:'位置', p:['用数对表示位置（列，行）','根据数对在方格纸上找点','平移后数对的变化']},
+      {t:'小数除法', p:['除数是整数的小数除法','除数是小数的除法（转化）','商的近似数','循环小数','用计算器探索规律']},
+      {t:'可能性', p:['事件发生的确定与不确定','可能性的大小','游戏规则的公平性']},
+      {t:'简易方程', p:['用字母表示数与数量关系','方程的意义','等式的性质','解方程并检验','列方程解决实际问题']},
+      {t:'多边形的面积', p:['平行四边形面积 = 底 × 高','三角形面积 = 底 × 高 ÷ 2','梯形面积 =（上底 + 下底）× 高 ÷ 2','组合图形的面积','面积公式的推导（转化思想）']},
+      {t:'数学广角——植树问题', p:['两端都栽：段数 + 1','一端栽：等于段数','两端不栽：段数 − 1','封闭曲线：棵数 = 段数']}
+    ]},
+    {term:'下册', units:[
+      {t:'观察物体（三）', p:['根据从一个方向看到的图形摆小正方体','根据三个方向的视图还原立体图形']},
+      {t:'因数与倍数', p:['因数与倍数的相互依存关系','2、5、3 的倍数特征','奇数与偶数','质数与合数','最大公因数与最小公倍数']},
+      {t:'长方体和正方体', p:['特征：面、棱、顶点','表面积的计算','体积与容积的意义','体积单位：立方厘米、立方分米、立方米','1 升 = 1 立方分米','不规则物体体积（排水法）']},
+      {t:'分数的意义和性质', p:['分数的意义与分数单位','分数与除法的关系','分数的基本性质','约分与通分','分数与小数的互化']},
+      {t:'图形的运动（三）', p:['旋转的三要素：中心、方向、角度','在方格纸上画旋转 90° 后的图形','设计简单的图案']},
+      {t:'分数的加法和减法', p:['同分母分数加减','异分母分数加减（先通分）','分数加减混合运算','整数运算律推广到分数']},
+      {t:'折线统计图', p:['单式折线统计图','复式折线统计图','根据折线图分析变化趋势']},
+      {t:'数学广角——找次品', p:['天平称量的推理','把物品尽量平均分成 3 份','找最优策略与最少次数']}
+    ]}
+  ]
+},
+{
+  g:6, name:'六年级', color:'#2fa08a',
+  ov:{ core:'分数、比、百分数、圆与圆柱，进入综合应用与总复习', bands:['分数乘除','比与比例','圆 · 圆柱圆锥','百分数 · 负数'] },
+  books:[
+    {term:'上册', units:[
+      {t:'分数乘法', p:['分数乘整数、分数乘分数','分数乘法与约分','倒数的认识','求一个数的几分之几是多少','连续求一个数的几分之几']},
+      {t:'位置与方向（二）', p:['用方向和距离确定位置','描述简单的行走路线','在平面图上标出位置']},
+      {t:'分数除法', p:['分数除法的计算法则（乘倒数）','已知一个数的几分之几是多少，求这个数','工程问题、和倍 / 差倍问题','比与除法的关系']},
+      {t:'比', p:['比的意义与各部分名称','比的基本性质','化简比与求比值','按比分配问题']},
+      {t:'圆', p:['圆心、半径、直径的关系','圆的周长 C = πd = 2πr','圆的面积 S = πr²','圆环的面积','扇形与圆心角']},
+      {t:'百分数（一）', p:['百分数的意义与写法','百分数与分数、小数的互化','求百分率（出勤率、合格率）','求一个数比另一个数多 / 少百分之几']},
+      {t:'扇形统计图', p:['扇形统计图表示部分与整体的关系','根据需要选择合适的统计图','从统计图中提取信息']},
+      {t:'数学广角——数与形', p:['数与形的对应（图形中的数列）','从特殊到一般找规律','用形解释数的运算']}
+    ]},
+    {term:'下册', units:[
+      {t:'负数', p:['负数的意义与读写','数轴上的正负数','比较正负数的大小','用正负数表示相反意义的量']},
+      {t:'百分数（二）', p:['折扣：现价 = 原价 × 折扣','成数','税率与应纳税额','利率与利息','购物优惠方案比较']},
+      {t:'圆柱与圆锥', p:['圆柱的侧面积与表面积','圆柱体积 V = Sh','圆锥体积 V = ⅓Sh','等底等高时圆柱体积是圆锥的 3 倍','旋转体与截面']},
+      {t:'比例', p:['比例的意义与基本性质','解比例','正比例与反比例','比例尺（图上距离与实际距离）','图形的放大与缩小']},
+      {t:'数学思考', p:['逻辑推理（列表、排除）','排列组合与握手问题','用数学思想解决实际问题']},
+      {t:'整理和复习', p:['数与代数：整数、小数、分数、百分数系统梳理','图形与几何：周长、面积、体积公式网络','统计与概率：三种统计图的比较','数学思考：找规律与推理']}
+    ]}
+  ]
+}
+];
+
+/* =========================================================
+   2. 工具函数
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const ri = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const shuffle = a => { const r=a.slice(); for(let i=r.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [r[i],r[j]]=[r[j],r[i]]; } return r; };
+const gcd = (a,b) => b ? gcd(b, a%b) : a;
+const r2 = x => Math.round(x*100)/100;
+const ns = x => String(r2(x));
+
+function numOpts(ans, o){
+  o = o || {};
+  const step = o.step===undefined?1:o.step;
+  const min = o.min===undefined?0:o.min;
+  const base = r2(ans);
+  const lim = Math.max(2, Math.abs(base) * 3);
+  let dif = (o.dif || [1,2,3,4,5]).filter(d => Math.abs(d) <= lim);
+  if(!dif.length) dif = [1,2,3];
+  const s = new Set([base]);
+  const floor = Math.max(min, Math.abs(base) * 0.25);
+  const cand = [];
+  dif.forEach(d => { cand.push(base+d*step, base-d*step); });
+  shuffle(cand).forEach(v => { if(s.size<4){ const x=r2(v); if(x>=floor) s.add(x); } });
+  let k=1;
+  while(s.size<4){ const x=r2(base+k*step); if(x>=Math.max(min,0)) s.add(x); k++; }
+  return shuffle([...s]).map(ns);
+}
+
+function numOptsRel(ans, o){
+  const base = r2(ans);
+  const dec = (String(base).split('.')[1] || '').length;
+  let cands;
+  if(dec === 0){
+    const digits = String(Math.abs(Math.round(base))).length;
+    const k = Math.pow(10, Math.max(0, digits - 3));   // 5 位数按 100 偏移，4 位数按 10
+    cands = [base+k, base-k, base+2*k, base-2*k, base+3*k, base-3*k, base+5*k, base-5*k];
+  } else {
+    const u = Math.pow(10, -dec);
+    cands = [base+u, base-u, base+2*u, base-2*u, base+10*u, base-10*u];
+  }
+  const floor = Math.max(1, Math.abs(base) * 0.25);
+  const s = new Set([base]);
+  for(const c of shuffle(cands)){
+    if(s.size >= 4) break;
+    const v = r2(c);
+    if(isFinite(v) && v >= floor) s.add(v);
+  }
+  let k2 = 1;
+  while(s.size < 4){ s.add(r2(base + k2 * Math.max(1, Math.abs(base)*0.1))); k2++; }
+  return shuffle([...s]).map(ns);
+}
+
+/* 把 "3/4" 或 "12.5" 解析成数值；"8 余 3" 之类无法解析返回 NaN */
+function valOf(s){
+  s = String(s).trim();
+  if(/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+  const m = s.match(/^(\d+)\/(\d+)$/);
+  if(m) return Number(m[1]) / Number(m[2]);
+  return NaN;
+}
+/* 数值相等即视为同一答案（避免 24/56 与 3/7 被当成两个不同选项） */
+function same(a, b){
+  if(String(a) === String(b)) return true;
+  const x = valOf(a), y = valOf(b);
+  return isFinite(x) && isFinite(y) && Math.abs(x - y) < 1e-9;
+}
+
+function optsFrom(ans, wrongs){
+  const out = [ans];
+  const push = w => { if(out.length < 4 && !out.some(o => same(o, w))) out.push(w); };
+  shuffle(wrongs.slice()).forEach(push);
+  if(out.length < 4){
+    const m = String(ans).match(/^(\d+)\/(\d+)$/);
+    if(m){
+      const a = Number(m[1]), b = Number(m[2]);
+      [(a+1)+'/'+b, a+'/'+(b+1), (a+1)+'/'+(b+1), (a+2)+'/'+b, a+'/'+(b+2), simpStr(a,b)].forEach(push);
+    } else if(/^\d+(\.\d+)?$/.test(String(ans))){
+      const n = parseFloat(ans);
+      let k = 1;
+      while(out.length < 4 && k < 40){ push(ns(r2(n*(1 + k*0.12)))); k++; }
+    }
+  }
+  return shuffle(out);
+}
+
+function simpStr(n,d){
+  if(n===0) return '0';
+  const g = gcd(Math.abs(n), Math.abs(d));
+  n/=g; d/=g;
+  if(d===1) return String(n);
+  return n + '/' + d;
+}
+
+/* =========================================================
+   3. 出题器
+   ========================================================= */
+const TOPICS = {
+1:[
+  { name:'10 以内加减', gen(){
+      if(Math.random()<0.5){
+        const a=ri(1,8), b=ri(1,10-a), ans=a+b;
+        return { q:a+' + '+b+' = ?', ans:String(ans), opts:numOpts(ans,{dif:[1,2,3]}),
+                 tip:'从 '+a+' 起往后数 '+b+' 个，就是 '+ans+'。' };
+      }
+      const a=ri(3,10), b=ri(1,a-1), ans=a-b;
+      return { q:a+' − '+b+' = ?', ans:String(ans), opts:numOpts(ans,{dif:[1,2,3]}),
+               tip:'想加算减：'+b+' 和 '+ans+' 合起来是 '+a+'。' };
+  }},
+  { name:'20 以内进位加', gen(){
+      const a=ri(6,9), b=ri(11-a,9), ans=a+b, need=10-a, rest=b-need;
+      const tip = rest===0
+        ? a+' + '+b+' 正好凑成 10。'
+        : '凑十法：把 '+b+' 分成 '+need+' 和 '+rest+'，'+a+'+'+need+'=10，10+'+rest+'='+ans+'。';
+      return { q:a+' + '+b+' = ?', ans:String(ans), opts:numOpts(ans,{dif:[1,2,3]}), tip };
+  }},
+  { name:'20 以内退位减', gen(){
+      const a=ri(11,18), b=ri(Math.max(2,a-9),9), ans=a-b;
+      return { q:a+' − '+b+' = ?', ans:String(ans), opts:numOpts(ans,{dif:[1,2,3]}),
+               tip:'破十法：'+a+' 分成 10 和 '+(a-10)+'，10−'+b+'='+(10-b)+'，'+(10-b)+'+'+(a-10)+'='+ans+'。' };
+  }},
+  { name:'比大小', gen(){
+      let x,y,label;
+      if(Math.random()<0.5){ x=ri(1,20); y=ri(1,20); label=x+' ○ '+y; }
+      else { const a=ri(2,9), b=ri(2,9), c=ri(3,16); x=a+b; y=c; label=a+' + '+b+' ○ '+c; }
+      const ans = x>y ? '>' : x<y ? '<' : '=';
+      return { q:'在 ○ 里填入合适的符号：<br>'+label, ans, opts:['>','<','='],
+               tip:'先算出结果 ' + x + (x===y?' 与 ':x>y?' 大于 ':x<y?' 小于 ':' 等于 ') + y + '。' };
+  }}
+],
+2:[
+  { name:'表内乘法', gen(){
+      const a=ri(2,9), b=ri(2,9), ans=a*b;
+      return { q:a+' × '+b+' = ?', ans:String(ans), opts:numOpts(ans,{dif:[1,2,3,a]}),
+               tip:'口诀：'+a+' 乘 '+b+' 得 '+ans+'（'+(a<=b?a+' '+b+' 得 '+ans:'')+'）。' };
+  }},
+  { name:'表内除法', gen(){
+      const a=ri(2,9), b=ri(2,9), c=a*b;
+      return { q:c+' ÷ '+a+' = ?', ans:String(b), opts:numOpts(b,{dif:[1,2,3]}),
+               tip:'想乘法口诀：'+a+' × '+b+' = '+c+'，所以 '+c+' ÷ '+a+' = '+b+'。' };
+  }},
+  { name:'两位数加减', gen(){
+      if(Math.random()<0.5){
+        const a=ri(15,80), b=ri(11,100-a), ans=a+b;
+        return { q:a+' + '+b+' = ?', ans:String(ans), opts:numOpts(ans,{dif:[1,10,2,20]}),
+                 tip:'笔算：个位加个位，满十进一；再算十位。' };
+      }
+      const a=ri(36,99), b=ri(11,a-6), ans=a-b;
+      return { q:a+' − '+b+' = ?', ans:String(ans), opts:numOpts(ans,{dif:[1,10,2,20]}),
+               tip:'笔算：个位不够减就从十位退一，退一当十。' };
+  }},
+  { name:'有余数除法', gen(){
+      const b=ri(3,9), q=ri(2,9), r=ri(1,b-1), a=b*q+r;
+      const ans=q+' 余 '+r;
+      return { q:a+' ÷ '+b+' = ? …… ?', ans,
+               opts:optsFrom(ans,[q+' 余 '+(r+1>0&&r+1<b?r+1:(b-1)), (q+1)+' 余 '+r, (q-1>0?q-1:q+2)+' 余 '+r, q+' 余 '+(b-r)]),
+               tip:b+' × '+q+' = '+b*q+'，'+a+' − '+b*q+' = '+r+'；余数 '+r+' 必须比除数 '+b+' 小。' };
+  }}
+],
+3:[
+  { name:'多位数乘一位数', gen(){
+      const a=ri(102,989), b=ri(2,9), ans=a*b;
+      return { q:a+' × '+b+' = ?', ans:String(ans), opts:numOptsRel(ans,{ratios:[0.1,0.01,1.5,2]}),
+               tip:'拆位相乘：'+Math.floor(a/100)*100+'×'+b+'='+Math.floor(a/100)*100*b+'，再加后面数位的积。' };
+  }},
+  { name:'除法（除数一位数）', gen(){
+      const d=ri(2,9), q=ri(21,140), a=d*q;
+      return { q:a+' ÷ '+d+' = ?', ans:String(q), opts:numOptsRel(q,{ratios:[0.1,0.01,2,1.5]}),
+               tip:'从最高位除起，' + d + ' × ' + q + ' = ' + a + '。' };
+  }},
+  { name:'周长', gen(){
+      if(Math.random()<0.5){
+        const a=ri(6,25), b=ri(3,15), ans=2*(a+b);
+        return { q:'一个长方形长 '+a+' 厘米、宽 '+b+' 厘米，周长是多少厘米？', ans:String(ans),
+                 opts:numOpts(ans,{dif:[1,2,4,a+b]}),
+                 tip:'长方形周长 =（长 + 宽）× 2 =（'+a+' + '+b+'）× 2 = '+ans+' 厘米。' };
+      }
+      const s=ri(4,20), ans=4*s;
+      return { q:'一个正方形的边长是 '+s+' 厘米，周长是多少厘米？', ans:String(ans),
+               opts:numOpts(ans,{dif:[1,2,4,s]}),
+               tip:'正方形周长 = 边长 × 4 = '+s+' × 4 = '+ans+' 厘米。' };
+  }},
+  { name:'分数初步（同分母）', gen(){
+      let d,x,y,n;
+      do { d=ri(4,10); x=ri(1,d-1); y=ri(1,d-x); n=x+y; }
+      while(n>=d || gcd(n,d)>1);
+      const ans = n+'/'+d;
+      return { q:x+'/'+d+' + '+y+'/'+d+' = ?', ans,
+               opts:optsFrom(ans,[n+'/'+(d*2), (x*y)+'/'+d, n+'/'+(d-1), (x+y)+'/'+(d+d)]),
+               tip:'同分母分数相加，分母不变，分子相加：('+x+' + '+y+') / '+d+' = '+ans+'。' };
+  }}
+],
+4:[
+  { name:'三位数乘两位数', gen(){
+      const a=ri(112,986), b=ri(12,89), ans=a*b;
+      return { q:a+' × '+b+' = ?', ans:String(ans), opts:numOptsRel(ans,{ratios:[0.1,0.01,1.5,2]}),
+               tip:'先分别用个位、十位去乘，再把两次的积相加。' };
+  }},
+  { name:'除数是两位数', gen(){
+      const d=ri(12,49), q=ri(3,20), a=d*q;
+      return { q:a+' ÷ '+d+' = ?', ans:String(q), opts:numOptsRel(q,{ratios:[0.2,0.1,2,1.5]}),
+               tip:'用"四舍五入"把 '+d+' 看作整十数试商，再检验。' };
+  }},
+  { name:'简便计算', gen(){
+      const k=ri(2,9);
+      const t=ri(1,3);
+      if(t===1) return { q:'125 × 8 × '+k+' = ?', ans:String(1000*k), opts:numOptsRel(1000*k,{ratios:[0.1,0.5,2,1.2]}),
+        tip:'先用乘法结合律：125 × 8 = 1000，再乘 '+k+' 得 '+(1000*k)+'。' };
+      if(t===2) return { q:k+' × 99 + '+k+' = ?', ans:String(100*k), opts:numOptsRel(100*k,{ratios:[0.1,0.5,2,1.5]}),
+        tip:'乘法分配律：'+k+' × 99 + '+k+' × 1 = '+k+' × (99 + 1) = '+k+' × 100 = '+(100*k)+'。' };
+      return { q:'25 × '+k+' × 4 = ?', ans:String(100*k), opts:numOptsRel(100*k,{ratios:[0.1,0.5,2,1.5]}),
+        tip:'乘法交换律：25 × 4 = 100，再乘 '+k+' 得 '+(100*k)+'。' };
+  }},
+  { name:'角的度量', gen(){
+      const A=ri(30,100), B=ri(25,170-A), C=180-A-B;
+      return { q:'一个三角形中，两个角分别是 '+A+'° 和 '+B+'°，第三个角是多少度？', ans:String(C),
+               opts:numOpts(C,{dif:[1,5,10,30],min:1}),
+               tip:'三角形内角和是 180°，180° − '+A+'° − '+B+'° = '+C+'°。' };
+  }}
+],
+5:[
+  { name:'小数乘法', gen(){
+      let A=ri(11,99); if(A%10===0) A+=ri(1,9);
+      const a=A/10, b=ri(2,9), ans=r2(a*b);
+      return { q:ns(a)+' × '+b+' = ?', ans:ns(ans), opts:numOptsRel(ans,{ratios:[0.1,0.01,2,10]}),
+               tip:'先按整数乘法算 '+Math.round(a*10)+' × '+b+'，再点上一位小数。' };
+  }},
+  { name:'小数除法', gen(){
+      let Q=ri(11,99); if(Q%10===0) Q+=ri(1,9);
+      const d=ri(2,9), q=Q/10, a=r2(d*q);
+      return { q:ns(a)+' ÷ '+d+' = ?', ans:ns(q), opts:numOptsRel(q,{ratios:[0.1,0.01,2,10]}),
+               tip:'把除数变成整数，被除数同时扩大相同倍数，商不变。' };
+  }},
+  { name:'多边形面积', gen(){
+      const t=ri(1,3);
+      if(t===1){
+        const b=ri(4,20), h=ri(2,12), ans=b*h;
+        return { q:'平行四边形的底是 '+b+' 厘米，高是 '+h+' 厘米，面积是多少平方厘米？', ans:String(ans),
+                 opts:numOpts(ans,{dif:[1,2,3,h,b]}),
+                 tip:'平行四边形面积 = 底 × 高 = '+b+' × '+h+' = '+ans+' 平方厘米。' };
+      }
+      if(t===2){
+        const b=ri(3,10)*2, h=ri(2,12), ans=b*h/2;
+        return { q:'三角形的底是 '+b+' 厘米，高是 '+h+' 厘米，面积是多少平方厘米？', ans:String(ans),
+                 opts:numOpts(ans,{dif:[1,2,b,h]}),
+                 tip:'三角形面积 = 底 × 高 ÷ 2 = '+b+' × '+h+' ÷ 2 = '+ans+' 平方厘米。' };
+      }
+      const a=ri(3,12), b=ri(a+1,20), h=ri(2,10)*2, ans=(a+b)*h/2;
+      return { q:'梯形上底 '+a+' 厘米、下底 '+b+' 厘米、高 '+h+' 厘米，面积是多少平方厘米？', ans:String(ans),
+               opts:numOpts(ans,{dif:[1,2,a+b,10]}),
+               tip:'梯形面积 =（上底 + 下底）× 高 ÷ 2 =（'+a+' + '+b+'）× '+h+' ÷ 2 = '+ans+' 平方厘米。' };
+  }},
+  { name:'异分母分数加减', gen(){
+      const pairs=[[2,3],[3,4],[2,5],[3,5],[4,5],[3,7],[5,6],[2,7]];
+      const p=pairs[ri(0,pairs.length-1)];
+      const d1=p[0], d2=p[1];
+      const a=ri(1,d1-1), b=ri(1,d2-1);
+      const N=a*d2+b*d1, D=d1*d2;
+      const ans=simpStr(N,D);
+      return { q:a+'/'+d1+' + '+b+'/'+d2+' = ?', ans,
+               opts:optsFrom(ans,[N+'/'+D, (a+b)+'/'+(d1+d2), N+'/'+(d1+d2), simpStr(a*d2,D)]),
+               tip:'先通分：公分母取 '+D+'，'+(a*d2)+'/'+D+' + '+(b*d1)+'/'+D+' = '+N+'/'+D+' = '+ans+'。' };
+  }},
+  { name:'因数与倍数', gen(){
+      const pairs=[[12,18],[8,12],[6,9],[15,20],[10,15],[16,24],[9,12],[14,21],[18,24]];
+      const p=pairs[ri(0,pairs.length-1)];
+      const g=gcd(p[0],p[1]), l=p[0]*p[1]/g;
+      const askG = Math.random()<0.5;
+      const ans = askG ? g : l;
+      return { q:'求 '+p[0]+' 和 '+p[1]+' 的'+(askG?'最大公因数':'最小公倍数')+'。', ans:String(ans),
+               opts:numOpts(ans,{dif:[1,2,3,6]}),
+               tip:(askG?'最大公因数是两个数公有质因数的积':'最小公倍数 = 两数之积 ÷ 最大公因数')+'，答案是 '+ans+'。' };
+  }}
+],
+6:[
+  { name:'分数乘法', gen(){
+      const d1=ri(3,9), a=ri(1,d1-1), d2=ri(3,9), b=ri(1,d2-1);
+      const ans=simpStr(a*b,d1*d2);
+      return { q:a+'/'+d1+' × '+b+'/'+d2+' = ?', ans,
+               opts:optsFrom(ans,[(a*b)+'/'+(d1*d2), (a+b)+'/'+(d1+d2), (a*b)+'/'+(d1+d2), simpStr(a*d2,d1*b)]),
+               tip:'分子相乘、分母相乘：('+a+'×'+b+') / ('+d1+'×'+d2+') = '+(a*b)+'/'+(d1*d2)+' = '+ans+'。' };
+  }},
+  { name:'分数除法', gen(){
+      const d1=ri(3,9), a=ri(1,d1-1), d2=ri(3,9), b=ri(1,d2-1);
+      const ans=simpStr(a*d2,d1*b);
+      return { q:a+'/'+d1+' ÷ '+b+'/'+d2+' = ?', ans,
+               opts:optsFrom(ans,[simpStr(a*b,d1*d2), (a*d2)+'/'+(d1*b), (a+b)+'/'+(d1+d2), simpStr(d1*b,a*d2)]),
+               tip:'除以一个分数等于乘它的倒数：'+a+'/'+d1+' × '+d2+'/'+b+' = '+ans+'。' };
+  }},
+  { name:'圆', gen(){
+      const r=ri(2,10);
+      if(Math.random()<0.5){
+        const ans=r2(2*3.14*r);
+        return { q:'一个圆的半径是 '+r+' 厘米，它的周长是多少厘米？（π 取 3.14）', ans:ns(ans),
+                 opts:numOptsRel(ans,{ratios:[0.5,2,0.25,1.5]}),
+                 tip:'C = 2πr = 2 × 3.14 × '+r+' = '+ns(ans)+' 厘米。' };
+      }
+      const ans=r2(3.14*r*r);
+      return { q:'一个圆的半径是 '+r+' 厘米，它的面积是多少平方厘米？（π 取 3.14）', ans:ns(ans),
+               opts:numOptsRel(ans,{ratios:[0.5,2,0.25,1.5]}),
+               tip:'S = πr² = 3.14 × '+r+'² = '+ns(ans)+' 平方厘米。' };
+  }},
+  { name:'百分数与折扣', gen(){
+      const zs=[5,6,7,8,9,7.5,8.5,6.5];
+      const z=zs[ri(0,zs.length-1)];
+      const p=ri(2,20)*20;
+      const ans=r2(p*z/10);
+      return { q:'一件商品原价 '+p+' 元，打 '+z+' 折出售，现价是多少元？', ans:ns(ans),
+               opts:optsFrom(ns(ans),[ns(r2(p-p*z/10)), ns(r2(p*(10-z)/10)), ns(r2(p*z/100)), ns(p)]),
+               tip:'打 '+z+' 折就是按原价的 '+(z*10)+'% 出售：'+p+' × '+(z/10)+' = '+ns(ans)+' 元。' };
+  }},
+  { name:'圆柱与圆锥', gen(){
+      const r=ri(2,6), h=ri(3,10);
+      const base=r2(3.14*r*r);
+      if(Math.random()<0.5){
+        const ans=r2(base*h);
+        return { q:'一个圆柱的底面半径 '+r+' 厘米、高 '+h+' 厘米，体积是多少立方厘米？（π 取 3.14）', ans:ns(ans),
+                 opts:numOptsRel(ans,{ratios:[0.33,3,0.5,2]}),
+                 tip:'V = Sh = 3.14 × '+r+'² × '+h+' = '+ns(ans)+' 立方厘米。' };
+      }
+      const ans=r2(base*h/3);
+      return { q:'一个圆锥的底面半径 '+r+' 厘米、高 '+h+' 厘米，体积是多少立方厘米？（π 取 3.14）', ans:ns(ans),
+               opts:numOptsRel(ans,{ratios:[3,0.5,2,0.33]}),
+               tip:'V = ⅓Sh = ⅓ × 3.14 × '+r+'² × '+h+' = '+ns(ans)+' 立方厘米。' };
+  }}
+]
+};
+
+/* =========================================================
+   4. 状态与渲染
+   ========================================================= */
+const state = { g:0, topic:0, cur:null, answered:false, streak:0 };
+let stats = {};
+try { stats = JSON.parse(localStorage.getItem('pm_stats') || '{}') || {}; } catch(e){ stats = {}; }
+function saveStats(){ try { localStorage.setItem('pm_stats', JSON.stringify(stats)); } catch(e){} }
+
+let autoTimer = null;
+function clearAuto(){ if(autoTimer){ clearTimeout(autoTimer); autoTimer=null; } }
+
+const fmt = s => String(s).replace(/(\d+)\/(\d+)/g, '<span class="fr"><i>$1</i><i>$2</i></span>');
+const hl = (s,kw) => s.split(kw).join('<b style="color:var(--accent)">'+kw+'</b>');
+const unitTotal = () => DATA.reduce((s,d)=>s+d.books.reduce((a,b)=>a+b.units.length,0),0);
+
+function totalStats(){
+  let c=0,t=0;
+  for(const k in stats){ c += stats[k].c || 0; t += stats[k].t || 0; }
+  return {c,t};
+}
+
+function applyAccent(){
+  const d = DATA.find(x=>x.g===state.g);
+  document.documentElement.style.setProperty('--accent', d ? d.color : '#3b4a6b');
+}
+
+function renderHero(){
+  const {c,t} = totalStats();
+  const rate = t ? Math.round(c/t*100) : 0;
+  $('#heroStats').innerHTML =
+    '<div class="stat"><b>'+t+'</b><span>已答题</span></div>' +
+    '<div class="stat"><b>'+c+'</b><span>答对</span></div>' +
+    '<div class="stat"><b>'+rate+'%</b><span>正确率</span></div>' +
+    '<div class="stat"><b>'+unitTotal()+'</b><span>个知识单元</span></div>';
+}
+
+function renderTabs(){
+  const tabs = [{g:0,name:'总览'}].concat(DATA.map(d=>({g:d.g,name:d.name})));
+  $('#gradeTabs').innerHTML = tabs.map(t =>
+    '<button class="gtab '+(t.g===state.g?'on':'')+'" data-g="'+t.g+'">'+t.name+'</button>'
+  ).join('');
+}
+
+function renderOutline(){
+  const kw = $('#search').value.trim();
+  if(state.g===0){
+    $('#outlineTitle').textContent = '六个年级的主线';
+    $('#unitCount').textContent = '共 ' + unitTotal() + ' 个单元';
+    $('#search').style.display = 'none';
+    $('#outline').innerHTML = DATA.map(d =>
+      '<div class="rm" data-g="'+d.g+'" style="--c:'+d.color+'">' +
+        '<div class="rm-h"><span class="dot"></span><b>'+d.name+'</b><span class="rm-core">'+d.ov.core+'</span></div>' +
+        '<div class="rm-bands">'+d.ov.bands.map(b=>'<span>'+b+'</span>').join('')+'</div>' +
+      '</div>'
+    ).join('');
+    return;
+  }
+  $('#search').style.display = '';
+  const g = DATA.find(d=>d.g===state.g);
+  const cnt = g.books.reduce((a,b)=>a+b.units.length,0);
+  $('#outlineTitle').textContent = g.name + '知识纲要';
+  $('#unitCount').textContent = cnt + ' 个单元';
+
+  if(kw){
+    const hits = [];
+    g.books.forEach(b => b.units.forEach(u => {
+      if(u.t.indexOf(kw)>=0){ hits.push({term:b.term, t:u.t, points:u.p}); return; }
+      const ps = u.p.filter(p => p.indexOf(kw)>=0);
+      if(ps.length) hits.push({term:b.term, t:u.t, points:ps});
+    }));
+    $('#outline').innerHTML = hits.length
+      ? hits.map(h =>
+          '<div class="unit" style="padding:12px 14px;margin-bottom:8px">' +
+            '<div style="font-weight:700;font-size:14px;margin-bottom:5px">'+h.t+
+              '<span class="uc" style="margin-left:8px">'+h.term+'</span></div>' +
+            '<ul style="padding:0 0 0 22px">'+h.points.map(p=>'<li>'+hl(p,kw)+'</li>').join('')+'</ul>' +
+          '</div>').join('')
+      : '<p style="color:#6c7789;font-size:13.5px">没有找到包含「'+kw+'」的知识点。可以试试：分数、面积、方程、余数、图形。</p>';
+    return;
+  }
+
+  $('#outline').innerHTML = g.books.map(b =>
+    '<div class="book"><div class="book-h">'+b.term+'</div>' +
+    b.units.map((u,i) =>
+      '<details class="unit"'+(i===0?' open':'')+'>' +
+        '<summary><span>'+u.t+'</span><span class="uc">'+u.p.length+' 个要点</span></summary>' +
+        '<ul>'+u.p.map(p=>'<li>'+p+'</li>').join('')+'</ul>' +
+      '</details>'
+    ).join('') + '</div>'
+  ).join('');
+}
+
+function renderMeter(){
+  const s = stats[state.g] || {c:0,t:0};
+  const rate = s.t ? Math.round(s.c/s.t*100) : 0;
+  $('#meter').innerHTML =
+    '<span class="pill">答对 '+s.c+' / '+s.t+'</span>' +
+    '<span class="pill">正确率 '+rate+'%</span>' +
+    '<span class="pill '+(state.streak>=3?'hot':'')+'">连对 '+state.streak+'</span>';
+}
+
+function renderQuestion(){
+  clearAuto();
+  const tps = TOPICS[state.g];
+  if(!tps) return;
+  if(state.topic >= tps.length) state.topic = 0;
+  const t = tps[state.topic];
+  const q = t.gen();
+  state.cur = q;
+  state.answered = false;
+  const done = (stats[state.g] ? stats[state.g].t : 0) + 1;
+  const maxLen = Math.max.apply(null, q.opts.map(o => String(o).length));
+  const ocls = maxLen > 7 ? ' sm' : (maxLen > 5 ? ' md' : '');
+  $('#quiz').innerHTML =
+    '<div class="qhead"><span class="qtag">'+t.name+' · 第 '+done+' 题</span>' +
+      '<button class="skip" data-act="skip">换一题</button></div>' +
+    '<div class="qtext">'+fmt(q.q)+'</div>' +
+    '<div class="opts">'+q.opts.map((o,i)=>'<button class="opt'+ocls+'" data-i="'+i+'">'+fmt(o)+'</button>').join('')+'</div>' +
+    '<div class="fb" id="fb"></div>';
+}
+
+function nextQuestion(){
+  clearAuto();
+  renderQuestion();
+}
+
+function pick(i){
+  if(state.answered || !state.cur) return;
+  state.answered = true;
+  const cur = state.cur;
+  const chosen = cur.opts[i];
+  const ok = same(chosen, cur.ans);
+
+  document.querySelectorAll('#quiz .opt').forEach((b,idx) => {
+    b.classList.add('done');
+    if(same(cur.opts[idx], cur.ans)) b.classList.add('ok');
+    else if(idx === i) b.classList.add('bad');
+  });
+
+  const s = stats[state.g] || (stats[state.g] = {c:0,t:0});
+  s.t++; if(ok) s.c++;
+  state.streak = ok ? state.streak + 1 : 0;
+  saveStats();
+  renderMeter();
+  renderHero();
+
+  const fb = $('#fb');
+  fb.className = 'fb show ' + (ok ? 'good' : 'bad');
+  fb.innerHTML =
+    (ok ? '<b>答对了</b> · ' : '<b>正确答案：' + fmt(cur.ans) + '</b> · ') + fmt(cur.tip) +
+    '<br><button class="next" data-act="next">' + (ok ? '下一题' : '再练一题') + '</button>';
+
+  if(ok){
+    autoTimer = setTimeout(() => { if(state.answered) nextQuestion(); }, 2000);
+  }
+}
+
+function renderPractice(){
+  const tps = TOPICS[state.g];
+  state.topic = 0;
+  state.streak = 0;
+  $('#topics').innerHTML = tps.map((t,i) =>
+    '<button class="chip '+(i===0?'on':'')+'" data-t="'+i+'">'+t.name+'</button>'
+  ).join('');
+  renderMeter();
+  renderQuestion();
+}
+
+function renderAll(){
+  clearAuto();
+  applyAccent();
+  renderTabs();
+  renderOutline();
+  renderHero();
+  if(state.g === 0){
+    document.body.dataset.view = 'overview';
+  } else {
+    document.body.dataset.view = 'grade';
+    renderPractice();
+  }
+}
+
+/* =========================================================
+   5. 事件
+   ========================================================= */
+$('#gradeTabs').addEventListener('click', e => {
+  const b = e.target.closest('.gtab');
+  if(!b) return;
+  const g = Number(b.dataset.g);
+  if(g === state.g) return;
+  state.g = g;
+  $('#search').value = '';
+  renderAll();
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+$('#outline').addEventListener('click', e => {
+  const rm = e.target.closest('.rm');
+  if(!rm) return;
+  state.g = Number(rm.dataset.g);
+  $('#search').value = '';
+  renderAll();
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+$('#topics').addEventListener('click', e => {
+  const c = e.target.closest('.chip');
+  if(!c) return;
+  state.topic = Number(c.dataset.t);
+  state.streak = 0;
+  document.querySelectorAll('#topics .chip').forEach(x => x.classList.toggle('on', x === c));
+  renderMeter();
+  renderQuestion();
+});
+
+$('#quiz').addEventListener('click', e => {
+  const opt = e.target.closest('.opt');
+  if(opt && !opt.classList.contains('done')){
+    pick(Number(opt.dataset.i));
+    return;
+  }
+  const act = e.target.closest('[data-act]');
+  if(act && act.dataset.act === 'next') nextQuestion();
+  if(act && act.dataset.act === 'skip') nextQuestion();
+});
+
+$('#search').addEventListener('input', renderOutline);
+
+document.addEventListener('keydown', e => {
+  if(state.g === 0) return;
+  if(e.key >= '1' && e.key <= '4'){
+    const btns = document.querySelectorAll('#quiz .opt');
+    const i = Number(e.key) - 1;
+    if(btns[i]) btns[i].click();
+  }
+  if(e.key === 'Enter'){
+    const n = document.querySelector('#quiz [data-act="next"]');
+    if(n) n.click();
+  }
+});
+
+/* =========================================================
+   6. 启动
+   ========================================================= */
+renderAll();
+</script>
+</body>
+</html>
