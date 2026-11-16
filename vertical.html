@@ -39,7 +39,7 @@ body{background:var(--bg);color:var(--ink);line-height:1.55;
 .pfoot a{color:var(--pri);font-size:11.5px;text-decoration:none;border-bottom:1px solid rgba(74,99,216,.3)}
 
 /* 方案选择 */
-.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.plans{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .plan{border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:8px 10px;cursor:pointer;text-align:left;font-family:inherit;transition:.16s;position:relative}
 .plan:hover{border-color:#c2cce8}
 .plan.on{border-color:var(--pri);background:var(--pri-soft);box-shadow:0 0 0 3px rgba(74,99,216,.09)}
@@ -71,11 +71,14 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(20,30,60,.04)}
 
 /* 竖式板 */
-.board{padding:16px 16px 18px}
-.bhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;flex-wrap:wrap}
+.board{padding:16px 16px 18px;position:relative}
+.bhead{display:flex;align-items:center;gap:10px;margin-bottom:4px;min-height:18px}
 .qtag{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.02em}
-.acts{display:flex;gap:7px;flex-wrap:wrap}
-.btn{border:1px solid var(--line);background:#fff;color:#39425a;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.14s;display:inline-flex;align-items:center;gap:5px}
+/* 题目右下角：提示语在左，三个按钮贴右下 */
+.bfoot{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-top:6px}
+.bfoot .verdict{flex:1 1 auto;min-width:0;text-align:left;margin:0;padding-bottom:7px}
+.acts{display:flex;gap:8px;flex:0 0 auto}
+.btn{border:1px solid var(--line);background:#fff;color:#39425a;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.14s;display:inline-flex;align-items:center;gap:5px}
 .btn:hover{border-color:#c2cce8;background:#fafbff}
 .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
 .btn.pri:hover{filter:brightness(1.07)}
@@ -91,9 +94,21 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items
 .expr{text-align:center;font-size:14px;color:var(--muted);margin:6px 0 2px;font-family:var(--mono)}
 
 .stage{display:flex;justify-content:center;padding:8px 0 4px;min-height:280px;align-items:center}
+/* 讲解时给气泡腾出底部空间（不加过渡，避免测量与真机不一致） */
+.stage.bubble-on{min-height:344px;padding-bottom:58px}
+/* 讲解时的算式气泡：浮在竖式下方，水平跟随当前列 */
+.calc{position:absolute;z-index:25;pointer-events:none;
+  background:#1d2739;color:#fff;border-radius:11px;padding:8px 14px;
+  font-size:14px;font-weight:700;font-family:var(--mono);letter-spacing:.01em;
+  white-space:nowrap;box-shadow:0 12px 24px -12px rgba(20,30,60,.75);
+  opacity:0;transform:translateY(-8px) scale(.94);
+  transition:opacity .18s,transform .2s,left .32s cubic-bezier(.3,1.25,.6,1)}
+.calc.on{opacity:1;transform:translateY(0) scale(1)}
+.calc::before{content:"";position:absolute;left:50%;top:-5px;margin-left:-5px;
+  width:11px;height:11px;background:#1d2739;transform:rotate(45deg);border-radius:2px}
 .vs{display:grid;grid-template-columns:var(--tpl);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;font-variant-numeric:tabular-nums;font-size:32px;font-weight:600;color:#1b2438}
 .vs-row{display:contents}
-.vs-cell{height:56px;display:flex;align-items:center;justify-content:center;position:relative;transition:background .2s}
+.vs-cell{height:56px;display:flex;align-items:center;justify-content:center;position:relative;transition:background .2s,transform .22s}
 .vs-cell.op{font-size:26px;color:#7a86a0;justify-content:flex-end;padding-right:3px}
 .vs-cell.brk{align-self:stretch;border-left:2.6px solid #33405c;margin-left:2px;border-top-left-radius:3px}
 .vs-cell.dot{height:auto;align-self:center;line-height:1}
@@ -101,16 +116,30 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items
 .vs-cell.dvr{justify-content:flex-end;padding-right:8px}
 .vs-cell.in{height:auto;padding:0}
 .vs-cell .z0{color:#c6cede;font-weight:500}
-.vs-cell.hi{background:#eef2ff}
-.vs-cell.hi::before{content:"";position:absolute;inset:3px 2px;border-radius:8px;background:rgba(74,99,216,.09);border:1px solid rgba(74,99,216,.25)}
+.vs-cell.hi{background:#eef2ff;transform:scale(1.06);z-index:2}
+.vs-cell.hi::before{content:"";position:absolute;inset:3px 2px;border-radius:8px;background:rgba(74,99,216,.12);border:1.5px solid rgba(74,99,216,.5);
+  box-shadow:0 0 0 0 rgba(74,99,216,.3);animation:hiPulse 1s ease-out infinite}
+@keyframes hiPulse{0%{box-shadow:0 0 0 0 rgba(74,99,216,.28)}100%{box-shadow:0 0 0 10px rgba(74,99,216,0)}}
 .vs-cell.hi > *{position:relative;z-index:1}
 
-.carryrow .vs-cell{height:30px}
-.carry{width:28px;height:24px;border-radius:6px;border:1.5px dashed #ccd5e8;background:transparent;color:#9aa5bb;font-size:12px;font-weight:700;font-family:var(--mono);cursor:pointer;padding:0;transition:transform .18s;line-height:1}
+.carryrow .vs-cell{height:36px}
+.carry{width:36px;height:30px;border-radius:8px;border:1.5px solid transparent;background:transparent;color:#93a0b8;
+  font-size:12.5px;font-weight:800;font-family:var(--mono);cursor:pointer;padding:0;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:background .16s,color .16s,border-color .16s,transform .18s}
+.carry::after{content:"";width:7px;height:7px;border-radius:50%;background:#d2dbeb;transition:.16s}
+.carry.set::after{display:none}
+.carry:hover{background:#eef2fb}
+.carry:active{transform:scale(.94)}
 .carry.set{border-style:solid;border-color:var(--pri);background:var(--pri);color:#fff;transform:scale(1.06)}
 .carry.set.red{border-color:#d8593f;background:#d8593f}
 .carry.pop{animation:pop .34s}
-@keyframes pop{0%{transform:scale(.62)}60%{transform:scale(1.14)}100%{transform:scale(1.06)}}
+.carry.miss{border-color:#d8593f;box-shadow:0 0 0 3px rgba(216,89,63,.16)}
+/* 讲解时数字「落」进格子；拨轮自己会滚，不需要这个 */
+.vinp.drop{animation:dropin .38s cubic-bezier(.3,1.4,.6,1)}
+@keyframes dropin{0%{transform:translateY(-10px) scale(.82);opacity:.25}
+  62%{transform:translateY(1px) scale(1.06)}100%{transform:none;opacity:1}}
+@keyframes pop{0%{transform:scale(.86)}60%{transform:scale(1.12)}100%{transform:scale(1.06)}}
 
 .vs-row.hr{position:relative}
 .vs-line{height:0;border-top:2.5px solid #33405c;align-self:center;margin:0 1px}
@@ -222,7 +251,7 @@ select:focus{border-color:var(--pri)}
 @media (hover:none){ .dbtn{opacity:.8} }
 @media (max-width:860px){
   main{grid-template-columns:1fr}
-  .plans{grid-template-columns:repeat(3,1fr);gap:6px}
+  .plans{grid-template-columns:repeat(2,1fr);gap:6px}
   .plan{padding:8px 9px}
   .plan b{font-size:12.5px}
   .plan span:not(.k){display:none}
@@ -258,7 +287,6 @@ select:focus{border-color:var(--pri)}
       <div class="plans" id="plans">
         <button class="plan on" data-d="dial"><span class="k">A</span><b>拨轮转动</b><span>手指上下拨动数字轮，iPad 上最好用</span></button>
         <button class="plan" data-d="key"><span class="k">B</span><b>键盘输入</b><span>在竖式格子里直接打字</span></button>
-        <button class="plan" data-d="tap"><span class="k">C</span><b>点按进位</b><span>进位、退位自己点亮</span></button>
       </div>
     </div>
 
@@ -269,13 +297,8 @@ select:focus{border-color:var(--pri)}
     </div>
 
     <div class="pblock">
-      <span class="plabel">讲解声音</span>
-      <div class="voice">
-        <button class="sw on" id="swVoice" aria-label="语音开关"></button>
-        <label>男声朗读每一步</label>
-        <select id="voiceSel"><option value="">系统默认语音</option></select>
-      </div>
-      <p class="hint" id="voiceHint">默认挑男声。首次播放要在你点过之后才会出声（浏览器限制）。</p>
+      <span class="plabel">讲解方式</span>
+      <p class="hint" style="margin:0">点题目右下角的「讲解」，会在竖式上<b>逐步动画演示</b>：正在算的那一列会亮起，下面浮出这一位的算式，进位自动落到上方，结果一位一位填进去。没有语音，看动画就够。</p>
     </div>
 
     <div class="pblock pfoot">
@@ -289,18 +312,21 @@ select:focus{border-color:var(--pri)}
     <section class="card board">
       <div class="bhead">
         <span class="qtag" id="qtag">—</span>
+      </div>
+
+      <div class="expr" id="expr"></div>
+      <div class="stage" id="stage"></div>
+      <div class="calc" id="calc"></div>
+      <p class="hint stage-hint" id="stageHint">手指按住数字轮 <b>上下拨动</b> 就能转（也可点 ▲ ▼）；竖式上方的小圆点是<b>进位</b>（减法时是退位），点一下切换 +1 / +2 / +3 或 −1 / −2 / −3。</p>
+      <div class="pad" id="pad"></div>
+      <div class="bfoot">
+        <div class="verdict" id="verdict"></div>
         <div class="acts">
           <button class="btn pri" id="btnPlay">讲解</button>
           <button class="btn" id="btnCheck">检查</button>
           <button class="btn" id="btnNext">换一题</button>
         </div>
       </div>
-
-      <div class="expr" id="expr"></div>
-      <div class="stage" id="stage"></div>
-      <p class="hint stage-hint" id="stageHint">手指按住数字轮 <b>上下拨动</b> 就能转（也可以点轮子边上的 ▲ ▼）；数字是循环的，9 的上面是 0。</p>
-      <div class="pad" id="pad"></div>
-      <div class="verdict" id="verdict"></div>
     </section>
 
     <aside class="side">
@@ -418,7 +444,7 @@ function buildAddSub(o){
       const x=dv(sA,p), y=dv(sB,p);
       if(sA[p]===' ' && sB[p]===' '){
         if(carry>0 && sC[p]!==' '){
-          steps.push({hi:[col], text: place(k,d)+'：只剩进上来的 '+carry+'，直接写下来。', set:[{id:'r'+p, v:String(carry)}]});
+          steps.push({hi:[col], ex:'进位 '+carry+'，直接落下', text: place(k,d)+'：只剩进上来的 '+carry+'，直接写下来。', set:[{id:'r'+p, v:String(carry)}]});
         }
         carry=0;
         continue;
@@ -429,11 +455,11 @@ function buildAddSub(o){
         const out=Math.floor(sum/10), ccol=colOf(p-1);
         const cid='c'+ccol;
         if(p-1>=0){ carryCells[ccol]={t:'carry', id:cid}; carries.push({id:cid, ans:String(out)}); }
-        steps.push({hi:[col], text: base+'满十，写 '+(sum%10)+'，向'+place(k+1,d)+'进 '+out+'。',
+        steps.push({hi:[col], ex:(d>0?place(k,d)+' ':'')+x+' + '+y+(carry?' + '+carry:'')+' = '+sum, text: base+'满十，写 '+(sum%10)+'，向'+place(k+1,d)+'进 '+out+'。',
           set:[{id:'r'+p, v:String(sum%10)}], carry:{id:cid, v:String(out)}});
         carry=out;
       } else {
-        steps.push({hi:[col], text: base+'写 '+sum+'，不进位。', set:[{id:'r'+p, v:String(sum)}]});
+        steps.push({hi:[col], ex:(d>0?place(k,d)+' ':'')+x+' + '+y+(carry?' + '+carry:'')+' = '+sum, text: base+'写 '+sum+'，不进位。', set:[{id:'r'+p, v:String(sum)}]});
         carry=0;
       }
     }
@@ -458,7 +484,8 @@ function buildAddSub(o){
       } else {
         txt = place(k,d)+'：'+x+(bor?' 被借走 1 剩 '+cur:'')+' 减 '+y+' 等于 '+rd+'。';
       }
-      steps.push({hi:[col], text:txt, set:[{id:'r'+p, v:String(rd)}], carry: took?{id:cid, v:'-1', red:true}:null});
+      steps.push({hi:[col], ex:(d>0?place(k,d)+' ':'')+(took?'('+x+' + 10) − '+y+' = '+rd : cur+' − '+y+' = '+rd), text:txt,
+        set:[{id:'r'+p, v:String(rd)}], carry: took?{id:cid, v:'-1', red:true}:null});
       bor = took?1:0;
     }
   }
@@ -513,15 +540,17 @@ function buildMul(o){
       const cid='c'+(st.p-1);
       carCells[st.p-1]={t:'carry', id:cid};
       carries.push({id:cid, ans:String(out)});
-      steps.push({hi:[st.p], text: base+'写 '+(st.prod%10)+'，向'+place(st.k+1,0)+'进 '+out+'。',
+      steps.push({hi:[st.p], ex:st.dgt+' × '+b+(st.carryIn?' + '+st.carryIn:'')+' = '+st.prod,
+        text: base+'写 '+(st.prod%10)+'，向'+place(st.k+1,0)+'进 '+out+'。',
         set:[{id:'r'+st.p, v:String(st.prod%10)}], carry:{id:cid, v:String(out)}});
     } else {
-      steps.push({hi:[st.p], text: base+'写 '+st.prod+'。', set:[{id:'r'+st.p, v:String(st.prod)}]});
+      steps.push({hi:[st.p], ex:st.dgt+' × '+b+(st.carryIn?' + '+st.carryIn:'')+' = '+st.prod,
+        text: base+'写 '+st.prod+'。', set:[{id:'r'+st.p, v:String(st.prod)}]});
     }
   });
   if(carry>0 && steps.length){
     const p0=N-1-na;
-    steps.push({hi:[p0], text:'最后把进上来的 '+carry+' 写在最前面。答案是 '+s+'。', set:[{id:'r'+p0, v:String(carry)}]});
+    steps.push({hi:[p0], ex:'进位 '+carry+' 写在最前面', text:'最后把进上来的 '+carry+' 写在最前面。答案是 '+s+'。', set:[{id:'r'+p0, v:String(carry)}]});
   } else if(steps.length){
     steps[steps.length-1].text += ' 答案是 '+s+'。';
   }
@@ -594,22 +623,23 @@ function buildDiv(o){
     const vCells=blank();
     for(let j2=0;j2<rs.length;j2++){
       const col=rStart+j2;
-      vCells[col] = isLast ? {t:'in', id:'m0'} : {t:'d', v:rs[j2]};
+      vCells[col] = isLast ? {t:'in', id:'m'+j2} : {t:'d', v:rs[j2]};
     }
     rows.push({type:'cells', op:'', cells:vCells});
 
     const takeTxt = '前面剩下 '+x.cur+'，';
     if(xi===0){
-      steps.push({hi:[2+x.i], text:'先看被除数的前 '+k+' 位，'+x.cur+' ÷ '+b+' 商 '+x.q+'，把 '+x.q+' 写在 '+ds[x.i]+' 的上面。',
+      steps.push({hi:[2+x.i], ex:x.cur+' ÷ '+b+' = '+x.q, text:'先看被除数的前 '+k+' 位，'+x.cur+' ÷ '+b+' 商 '+x.q+'，把 '+x.q+' 写在 '+ds[x.i]+' 的上面。',
         set:[{id:'q'+x.i, v:String(x.q)}]});
     } else {
-      steps.push({hi:[2+x.i], text:'把下一位 '+ds[x.i]+' 落下来，'+takeTxt+'除以 '+b+' 商 '+x.q+'。',
+      steps.push({hi:[2+x.i], ex:x.cur+' ÷ '+b+' = '+x.q, text:'把下一位 '+ds[x.i]+' 落下来，'+takeTxt+'除以 '+b+' 商 '+x.q+'。',
         set:[{id:'q'+x.i, v:String(x.q)}]});
     }
-    steps.push({hi:[2+x.i], text:x.q+' 乘 '+b+' 等于 '+x.prod+'，'+x.cur+' 减 '+x.prod+' 等于 '+x.rem+'。',
-      set: isLast?[{id:'m0', v:String(x.rem)}]:[]});
+    steps.push({hi:[2+x.i], ex:x.cur+' − '+x.q+' × '+b+' = '+x.rem, text:x.q+' 乘 '+b+' 等于 '+x.prod+'，'+x.cur+' 减 '+x.prod+' 等于 '+x.rem+'。',
+      set: isLast? String(x.rem).split('').map((ch,j)=>({id:'m'+j, v:ch})) : []});
   });
-  inputs.push({id:'m0', ans:String(remFinal)});
+  /* 余数可能是两位数，逐位一个输入格 */
+  String(remFinal).split('').forEach((ch,j)=>inputs.push({id:'m'+j, ans:ch}));
 
   const answer = remFinal>0 ? qnum+' 余 '+remFinal : String(qnum);
   steps[steps.length-1].text += ' 所以 '+a+' ÷ '+b+' = '+answer+'，余数比除数小，做对了。';
@@ -798,7 +828,7 @@ function buildMulN(a,b){
     partRows.push({type:'cells', op:'', cells});
 
     const word = k===0 ? place(0,0) : place(k,0);
-    steps.push({hi:[end],
+    steps.push({hi:[end], ex:a+' × '+dgt+' = '+val,
       text: word+'：'+a+' 乘 '+dgt+' 等于 '+val+'，'+(k?'写在'+place(k,0)+'起':'写在个位起')+'。',
       set:str.split('').map((ch,j)=>({id:'p'+k+'_'+j, v:ch}))});
   });
@@ -808,7 +838,8 @@ function buildMulN(a,b){
   const shiftNote = dsB.length>1
     ? '把两次乘得的结果加起来：'+dsB.map((d,k)=>a*d*Math.pow(10,k)).join(' 加 ')+' 等于 '+total+'。'
     : '答案是 '+total+'。';
-  steps.push({hi:[N-1], text: shiftNote, set: resInputs.map(x=>({id:x.id, v:x.ans}))});
+  steps.push({hi:[N-1], ex: dsB.map((d,k)=>a*d*Math.pow(10,k)).join(' + ')+' = '+total,
+    text: shiftNote, set: resInputs.map(x=>({id:x.id, v:x.ans}))});
 
   const rows=[{type:'cells', op:'', cells:aCells},
               {type:'cells', op:'×', cells:bCells},
@@ -960,7 +991,12 @@ function toast(title, sub){
    5. 状态与渲染
    ========================================================= */
 const state = { design:'dial', gtab:STAGES[prog.i].gi, q:null, res:{}, car:{}, playing:false, n:0, answered:false };
-let playToken = 0, voiceOn = true, voiceName = '', lastInput = null, autoTimer = null;
+let playToken = 0, lastInput = null, autoTimer = null;
+
+const HINT = {
+  dial: '手指按住数字轮 <b>上下拨动</b> 就能转（也可点 ▲ ▼）；竖式上方的小圆点是<b>进位</b>（减法时是退位），点一下切换 +1 / +2 / +3 或 −1 / −2 / −3。',
+  key:  '在竖式格子里直接打字，会自动跳到下一位；上方小圆点是<b>进位</b>（减法时是退位），点一下切换 +1 / +2 / +3 或 −1 / −2 / −3。'
+};
 
 /* 顶部一行 + 折叠面板 */
 function renderPath(){
@@ -1008,8 +1044,6 @@ function renderStage(){
       html += '<div class="vs-line" style="'+gr+'grid-column:'+(row.from+2)+' / span '+(row.to-row.from+1)+'"></div>';
       return;
     }
-    /* 只有「点按进位」方案才画进位格，其他方案留白会显得像多余的空框 */
-    if(row.cls==='carryrow' && state.design!=='tap') return;
     html += '<div class="vs-cell op" style="'+gr+'">'+(row.op||'')+'</div>';
     row.cells.forEach((c,ci)=>{ html += cellHTML(c,ci,gr); });
   });
@@ -1020,11 +1054,11 @@ function renderStage(){
 function cellHTML(c, ci, gr){
   const col = ' data-col="'+ci+'" style="'+(gr||'')+'"';
   if(c.t==='d')     return '<div class="vs-cell '+(c.cls||'')+'"'+col+'>'+c.v+'</div>';
-  if(c.t==='sp')    return '<div class="vs-cell"'+col+'></div>';
+  if(c.t==='sp')    return '<div class="vs-cell sk"'+col+'></div>';
   if(c.t==='dot')   return '<div class="vs-cell dot"'+col+'><i class="dp"></i></div>';
   if(c.t==='pad0')  return '<div class="vs-cell"'+col+'><span class="z0">0</span></div>';
   if(c.t==='brk')   return '<div class="vs-cell brk"'+col+'></div>';
-  if(c.t==='carry') return '<div class="vs-cell"'+col+'><button class="carry" data-cid="'+c.id+'"></button></div>';
+  if(c.t==='carry') return '<div class="vs-cell cc"'+col+'><button class="carry" data-cid="'+c.id+'"></button></div>';
   if(c.t==='in')    return '<div class="vs-cell in"'+col+'>'+inputHTML(c.id)+'</div>';
   return '<div class="vs-cell"'+col+'></div>';
 }
@@ -1059,14 +1093,20 @@ function placeDial(el, v, instant){
   return dh;
 }
 
-function setResult(id, v){
+function setResult(id, v, animate){
   state.res[id] = String(v);
   if(state.design==='dial'){
+    /* 拨轮自己会滚动到位，滚动本身就是动画 */
     const el = document.querySelector('.dial[data-id="'+id+'"]');
     if(el) placeDial(el, v);
   } else {
     const el = document.querySelector('.vinp[data-id="'+id+'"]');
-    if(el) el.value = v;
+    if(el){
+      el.value = v;
+      if(animate){
+        el.classList.remove('drop'); void el.offsetWidth; el.classList.add('drop');
+      }
+    }
   }
 }
 
@@ -1074,7 +1114,7 @@ function setCarry(id, v, red){
   const btn = document.querySelector('.carry[data-cid="'+id+'"]');
   if(!btn) return;
   state.car[id] = v ? String(v) : '';
-  btn.textContent = v ? String(v).replace('-','−') : '';
+  btn.textContent = v ? (String(v).charAt(0)==='-' ? '−'+String(v).slice(1) : '+'+String(v)) : '';
   btn.classList.toggle('set', !!v);
   btn.classList.toggle('red', !!red || String(v).charAt(0)==='-');
   btn.classList.remove('pop');
@@ -1084,7 +1124,11 @@ function setCarry(id, v, red){
 
 function highlight(cols){
   (cols||[]).forEach(c=>{
-    document.querySelectorAll('.vs-cell[data-col="'+c+'"]').forEach(el=>el.classList.add('hi'));
+    document.querySelectorAll('.vs-cell[data-col="'+c+'"]').forEach(el=>{
+      /* 进位格自己会弹跳、空格格只是占位，都不跟着整列高亮，否则空框看起来像要填东西 */
+      if(el.classList.contains('cc') || el.classList.contains('sk')) return;
+      el.classList.add('hi');
+    });
   });
 }
 function unhighlight(){ document.querySelectorAll('.vs-cell.hi').forEach(el=>el.classList.remove('hi')); }
@@ -1109,67 +1153,47 @@ function markAllDone(){
 }
 
 /* =========================================================
-   6. 语音
-   ========================================================= */
-const MALE = /Yu-shu|Li-mu|Yunjian|Yunxi|Yunyang|Rocko|Reed|Eddy|Grandpa|Kangkang|Liang|male|男/i;
-const FEMALE = /Tingting|Meijia|Sinji|Flo|Sandy|Shelley|Grandma|婷婷|美佳|善怡/i;
-
-let voiceTries = 0;
-function loadVoices(){
-  if(!window.speechSynthesis){
-    $('#voiceSel').innerHTML = '<option>此浏览器不支持语音</option>';
-    return;
-  }
-  const all = speechSynthesis.getVoices().filter(v=>/^zh/i.test(v.lang));
-  if(!all.length){
-    if(voiceTries++ < 24) setTimeout(loadVoices, 250);
-    return;
-  }
-  voiceTries = 99;
-  all.sort((a,b)=>{
-    const am = MALE.test(a.name)?0:1, bm = MALE.test(b.name)?0:1;
-    if(am!==bm) return am-bm;
-    const af = FEMALE.test(a.name)?1:0, bf = FEMALE.test(b.name)?1:0;
-    return af-bf;
-  });
-  const prev = voiceName;
-  $('#voiceSel').innerHTML = all.map(v=>{
-    const tag = MALE.test(v.name) ? '（男）' : (FEMALE.test(v.name)?'（女）':'');
-    return '<option value="'+v.name+'">'+v.name+tag+' · '+v.lang+'</option>';
-  }).join('');
-  voiceName = all.some(v=>v.name===prev) ? prev : all[0].name;
-  $('#voiceSel').value = voiceName;
-  $('#voiceHint').textContent = '默认选中「'+all[0].name+'」。如果听起来不是男声，可在下拉里换一个；也可以在 系统设置 › 辅助功能 › 朗读内容 里下载更多声音。';
-}
-
-function speak(text){
-  return new Promise(resolve=>{
-    if(!voiceOn || !window.speechSynthesis){ setTimeout(resolve, 700); return; }
-    try{
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'zh-CN';
-      u.rate = 0.96;
-      u.pitch = 0.92;
-      const v = speechSynthesis.getVoices().find(x=>x.name===voiceName);
-      if(v) u.voice = v;
-      let done = false;
-      const fin = ()=>{ if(!done){ done=true; resolve(); } };
-      u.onend = fin; u.onerror = fin;
-      speechSynthesis.speak(u);
-      setTimeout(fin, 1800 + text.length*260);
-    }catch(e){ setTimeout(resolve, 700); }
-  });
-}
-
-/* =========================================================
    7. 讲解播放
    ========================================================= */
-function endPlay(){ state.playing = false; $('#btnPlay').disabled = false; }
+function endPlay(){
+  state.playing = false;
+  $('#btnPlay').disabled = false;
+  $('#stage').classList.remove('bubble-on');
+  $('#calc').classList.remove('on');
+}
 
+/* 算式气泡：浮在竖式下方，水平对准正在算的那一列 */
+function showCalc(st){
+  const c = $('#calc');
+  if(!st || !st.ex){ c.classList.remove('on'); return; }
+  c.textContent = st.ex;
+  c.classList.add('on');
+  const board = document.querySelector('.board').getBoundingClientRect();
+  const col = (st.hi && st.hi.length) ? st.hi[0] : null;
+  const cell = (col!==null) ? document.querySelector('.vs-cell[data-col="'+col+'"]') : null;
+  const vs = document.querySelector('.vs');
+  let cx = board.width / 2;
+  if(cell){
+    const r = cell.getBoundingClientRect();
+    cx = r.left + r.width / 2 - board.left;
+  }
+  const w = c.offsetWidth || 140;
+  c.style.left = Math.max(8, Math.min(board.width - w - 8, cx - w / 2)) + 'px';
+  /* 紧贴竖式下方 12px：无论舞台多高都不会压住数字 */
+  const vsBottom = vs ? vs.getBoundingClientRect().bottom - board.top : 0;
+  c.style.top = (vsBottom + 12) + 'px';
+  /* 长除法这类高竖式，气泡会落到屏幕外：最小幅度滚动让它回到视野 */
+  requestAnimationFrame(()=>{
+    const r = c.getBoundingClientRect();
+    if(r.bottom > window.innerHeight - 10 || r.top < 56){
+      c.scrollIntoView({ block:'nearest', behavior:'smooth' });
+    }
+  });
+}
+
+/* 逐步动画演示：高亮当前列 → 算式气泡 → 数字/进位落下 → 停一下再走下一步 */
 async function play(){
   if(state.playing) return;
-  if(!voiceName && window.speechSynthesis) loadVoices();
   clearTimeout(autoTimer);
   const my = ++playToken;
   state.playing = true;
@@ -1178,26 +1202,37 @@ async function play(){
   $('#verdict').className = 'verdict';
   resetInputs();
   renderSteps();
+  $('#stage').classList.add('bubble-on');
+  await wait(300);
 
   const steps = state.q.steps;
   for(let i=0;i<steps.length;i++){
     if(my !== playToken){ endPlay(); return; }
     const st = steps[i];
-    highlight(st.hi);
     markStep(i);
-    if(st.set) st.set.forEach(x=>setResult(x.id, x.v));
-    if(st.carry) setCarry(st.carry.id, st.carry.v, st.carry.red);
-    await speak(st.text);
+    highlight(st.hi);
+    showCalc(st);
+    await wait(430);
     if(my !== playToken){ endPlay(); return; }
-    await wait(240);
+
+    if(st.set) st.set.forEach(x=>setResult(x.id, x.v, true));
+    if(st.carry) setCarry(st.carry.id, st.carry.v, st.carry.red);
+    await wait(830);
+    if(my !== playToken){ endPlay(); return; }
+
     unhighlight();
-    await wait(110);
+    const last = i === steps.length-1;
+    if(!last) await wait(70);
   }
   if(my !== playToken){ endPlay(); return; }
-  endPlay();
+
   markAllDone();
+  state.playing = false;
+  $('#btnPlay').disabled = false;
+  $('#calc').classList.remove('on');
   $('#verdict').textContent = '讲解完毕 · 答案是 ' + state.q.answer;
   $('#verdict').className = 'verdict good';
+  setTimeout(()=>{ if(my===playToken) $('#stage').classList.remove('bubble-on'); }, 700);
 }
 
 function resetInputs(){
@@ -1229,7 +1264,6 @@ function onRight(){
       $('#verdict').className = 'verdict good';
       celebrateDots();
       toast(st.gName+' · '+st.label+' 通过', '进入 '+nx.gName+' · '+nx.label);
-      if(voiceOn) speak('连对十题，这一关通过了。下一关，'+nx.gName+'，'+nx.label+'。');
       state.n = 0;
       autoTimer = setTimeout(newQuestion, 2400);
     } else {
@@ -1251,12 +1285,17 @@ function onRight(){
   autoTimer = setTimeout(newQuestion, 1200);
 }
 
-function onWrong(wrong){
+function onWrong(wrongD, wrongC){
   state.answered = true;
   const prev = prog.streak;
   prog.streak = 0;
   saveProg(); renderPath();
-  $('#verdict').textContent = '答错 ' + wrong + ' 处' + (prev ? ' · 连对中断（' + prev + ' → 0）' : '') + ' · 正确答案 ' + state.q.answer;
+  const bits = [];
+  if(wrongD) bits.push('数字错 ' + wrongD + ' 位');
+  if(wrongC) bits.push('进位错 ' + wrongC + ' 处');
+  $('#verdict').textContent = bits.join('，')
+    + (prev ? ' · 连对中断（' + prev + ' → 0）' : '')
+    + ' · 正确答案 ' + state.q.answer;
   $('#verdict').className = 'verdict err';
 }
 
@@ -1270,7 +1309,7 @@ function celebrateDots(){
 function check(){
   if(state.playing || state.answered) return;
   const q = state.q;
-  let wrong = 0, filled = 0;
+  let wrongD = 0, wrongC = 0, filled = 0;
 
   q.inputs.forEach(inp=>{
     const el = document.querySelector('[data-id="'+inp.id+'"]');
@@ -1279,19 +1318,23 @@ function check(){
     if(!el) return;
     el.classList.remove('ok','bad');
     if(v === inp.ans) el.classList.add('ok');
-    else { el.classList.add('bad'); wrong++; }
+    else { el.classList.add('bad'); wrongD++; }
   });
 
-  if(state.design==='tap'){
-    q.carries.forEach(c=>{
-      const v = state.car[c.id] || '';
-      if(v !== c.ans){
-        wrong++;
-        const btn = document.querySelector('.carry[data-cid="'+c.id+'"]');
-        if(btn) btn.classList.add('pop');
+  q.carries.forEach(c=>{
+    const v = state.car[c.id] || '';
+    const btn = document.querySelector('.carry[data-cid="'+c.id+'"]');
+    if(btn) btn.classList.remove('miss');
+    if(v !== c.ans){
+      wrongC++;
+      if(btn){
+        btn.classList.add('pop');
+        setTimeout(()=>btn.classList.remove('pop'), 400);
+        /* 没标 / 标错的进位用红圈提示，一眼看到漏在哪一位 */
+        if(!v) btn.classList.add('miss');
       }
-    });
-  }
+    }
+  });
 
   if(filled === 0 && state.design!=='dial'){
     $('#verdict').textContent = '先把每一位填上，再点检查。';
@@ -1299,8 +1342,8 @@ function check(){
     return;
   }
 
-  if(wrong === 0) onRight();
-  else onWrong(wrong);
+  if(wrongD + wrongC === 0) onRight();
+  else onWrong(wrongD, wrongC);
 }
 
 /* =========================================================
@@ -1330,15 +1373,17 @@ $('#stage').addEventListener('click', e=>{
     return;
   }
   const car = e.target.closest('.carry');
-  if(car && state.design==='tap' && !state.playing){
+  if(car && !state.playing && !state.answered){
     const cid = car.dataset.cid;
     const item = state.q.carries.find(x=>x.id===cid);
     if(!item) return;
-    const seq = item.ans.charAt(0)==='-' ? ['','-1','-2']
-      : (Number(item.ans)<=2 ? ['','1','2'] : ['','1','2','3','4','5','6','7','8','9']);
+    const neg = item.ans.charAt(0)==='-';
+    /* 进位：+1 → +2 → +3；需要更大的进位（如乘法进 8）时按答案放宽上限 */
+    const seq = neg
+      ? ['','-1','-2','-3']
+      : [''].concat(Array.from({length:Math.max(3, Number(item.ans)||1)}, (_,i)=>String(i+1)));
     const i = seq.indexOf(state.car[cid]||'');
-    const v = seq[(i+1)%seq.length];
-    setCarry(cid, v, item.ans.charAt(0)==='-');
+    setCarry(cid, seq[(i+1)%seq.length], neg);
   }
 });
 
@@ -1454,9 +1499,11 @@ $('#plans').addEventListener('click', e=>{
   const p = e.target.closest('.plan');
   if(!p) return;
   state.design = p.dataset.d;
+  playToken++;                       /* 切方案时中断正在播的讲解 */
+  state.playing = false;
   document.querySelectorAll('.plan').forEach(x=>x.classList.toggle('on', x===p));
   $('#pad').classList.toggle('show', state.design!=='dial');
-  $('#stageHint').style.display = state.design==='dial' ? '' : 'none';
+  $('#stageHint').innerHTML = HINT[state.design] || HINT.dial;
   renderStage();
   resetInputs();
   $('#verdict').textContent = '';
@@ -1466,17 +1513,6 @@ $('#plans').addEventListener('click', e=>{
 $('#btnPlay').addEventListener('click', play);
 $('#btnCheck').addEventListener('click', check);
 $('#btnNext').addEventListener('click', ()=>{ clearTimeout(autoTimer); newQuestion(); });
-
-$('#swVoice').addEventListener('click', ()=>{
-  voiceOn = !voiceOn;
-  $('#swVoice').classList.toggle('on', voiceOn);
-  if(!voiceOn && window.speechSynthesis) speechSynthesis.cancel();
-});
-
-$('#voiceSel').addEventListener('change', e=>{
-  voiceName = e.target.value;
-  speak('语音已切换，我是这次讲解的朗读声音。');
-});
 
 /* =========================================================
    10. 启动
@@ -1494,6 +1530,8 @@ function newQuestion(){
   $('#expr').textContent = state.q.expr;
   $('#verdict').textContent = '';
   $('#verdict').className = 'verdict';
+  $('#stage').classList.remove('bubble-on');
+  $('#calc').classList.remove('on');
   renderStage();
   renderSteps();
   resetInputs();
@@ -1502,11 +1540,6 @@ function newQuestion(){
 $('#pad').innerHTML = ['1','2','3','4','5','6','7','8','9','0'].map(d=>
   '<button data-k="'+d+'">'+d+'</button>').join('') +
   '<button class="del" data-k="del">删除</button>';
-
-if(window.speechSynthesis){
-  loadVoices();
-  speechSynthesis.onvoiceschanged = loadVoices;
-}
 
 /* 顶部：折叠面板开关 */
 $('#btnPanel').addEventListener('click', ()=>{
