@@ -9,6 +9,11 @@
  * 两家的 Key 与实现都留在服务器，页面只拿 mp3。
  *
  * 结果按文本 hash 落在 CACHE_DIR，同一句只合成一次。
+ *
+ * 并发：火山账号总额度 10，另一个 AI 也在用，本服务最多占 5（SX2_VOLC_CONCURRENCY）。
+ * 云希单独一个池（默认 4），两个引擎互不抢名额；名额只统计真正打到上游的请求，
+ * 缓存命中不占。排队超时（SX2_TTS_QUEUE_TIMEOUT，默认 12s）或队列满（SX2_TTS_MAX_QUEUE，
+ * 默认 40）时当作「忙」处理，直接换下一个引擎，而不是把火山标记为故障。
  */
 
 const fs = require('fs');
@@ -37,16 +42,21 @@ const CONTEXT = '保持你本人的自然说话声线，像坐在孩子旁边一
   + '只读正文，不读这些指导，不加笑声叹气或背景声。';
 
 const MAX_TEXT = 300;
-const MAX_CONCURRENT = 4;
+
+/* 账号总并发 10，另一个 AI 也在用，本服务最多占 5。
+   两个引擎各自计数：火山卡住时不拖累云希，云希也不占用火山的名额。 */
+const VOLC_MAX = Math.max(1, Number(process.env.SX2_VOLC_CONCURRENCY || 5));
+const YUNXI_MAX = Math.max(1, Number(process.env.SX2_YUNXI_CONCURRENCY || 4));
+const MAX_QUEUE = Math.max(VOLC_MAX, Number(process.env.SX2_TTS_MAX_QUEUE || 40));
+const QUEUE_TIMEOUT = Number(process.env.SX2_TTS_QUEUE_TIMEOUT || 12000);
+
 const VOLC_TIMEOUT = 15000;
 const EDGE_TIMEOUT = 12000;
 const VOLC_COOLDOWN_MS = 90 * 1000;   /* 火山失败后这段时间直接走云希 */
 
 let keyCache = null;
 let volcDownUntil = 0;
-let active = 0;
 let writesSinceSweep = 0;
-const waiters = [];
 const inflight = new Map();
 
 /* ---------------- 基础工具 ---------------- */
@@ -113,16 +123,44 @@ function sweepCache() {
   }
 }
 
-function acquire() {
-  if (active < MAX_CONCURRENT) { active++; return Promise.resolve(); }
-  return new Promise(res => waiters.push(() => { active++; res(); }));
+/* 每个引擎一个信号量：active 只统计真正打到上游的请求，缓存命中不占名额 */
+function makeLimiter(max, label){
+  let active = 0, peak = 0;
+  const waiters = [];
+  return {
+    max,
+    get active(){ return active; },
+    get peak(){ return peak; },
+    get queued(){ return waiters.length; },
+    acquire(){
+      if (active < max) { active++; if (active > peak) peak = active; return Promise.resolve(); }
+      if (waiters.length >= MAX_QUEUE) {
+        return Promise.reject(new Error(label + ' busy: queue full (' + waiters.length + ')'));
+      }
+      return new Promise((resolve, reject) => {
+        const w = { timer: null };
+        const enter = () => { clearTimeout(w.timer); active++; if (active > peak) peak = active; resolve(); };
+        /* 排队太久说明上游拥塞，宁可让前端回落系统 TTS，也不无限堆积 */
+        if (QUEUE_TIMEOUT > 0) {
+          w.timer = setTimeout(() => {
+            const i = waiters.indexOf(w);
+            if (i >= 0) { waiters.splice(i, 1); reject(new Error(label + ' busy: queue timeout')); }
+          }, QUEUE_TIMEOUT);
+        }
+        w.enter = enter;
+        waiters.push(w);
+      });
+    },
+    release(){
+      active--;
+      const next = waiters.shift();
+      if (next) next.enter();
+    }
+  };
 }
 
-function release() {
-  active--;
-  const next = waiters.shift();
-  if (next) next();
-}
+const volcLim = makeLimiter(VOLC_MAX, 'volc');
+const yunxiLim = makeLimiter(YUNXI_MAX, 'yunxi');
 
 /* ---------------- 引擎一：火山（昕哥音色） ---------------- */
 
@@ -170,6 +208,7 @@ function volcSynth(text) {
       }
       let buf = '';
       const parts = [];
+      let finished = false;
       res.setEncoding('utf8');
       res.on('data', chunk => {
         buf += chunk;
@@ -185,13 +224,16 @@ function volcSynth(text) {
             return done(new Error('volc code ' + obj.code + ' ' + (obj.message || '')));
           }
           if (obj.data) parts.push(Buffer.from(obj.data, 'base64'));
-          if (obj.code === 20000000) {
-            const out = Buffer.concat(parts);
-            return out.length > 1000 ? done(null, out) : done(new Error('volc empty audio'));
-          }
+          if (obj.code === 20000000) finished = true;
         }
       });
-      res.on('end', () => done(new Error('volc stream ended without finish')));
+      /* 等响应流真正结束再算完成：并发名额释放的时刻与上游会话结束对齐，
+         否则本地已放行下一句、上游还把上一句算在并发里，实际会超限 */
+      res.on('end', () => {
+        if (!finished) return done(new Error('volc stream ended without finish'));
+        const out = Buffer.concat(parts);
+        out.length > 1000 ? done(null, out) : done(new Error('volc empty audio'));
+      });
     });
 
     req.on('timeout', () => { req.destroy(new Error('volc timeout')); });
@@ -364,30 +406,47 @@ async function synth(text, prefer) {
   let lastErr = null;
   for (const engine of order) {
     const cached = readCache(engine, text);
-    if (cached) return { engine, buf: cached, cache: 'hit' };
+    if (cached) return { engine, buf: cached, cache: 'hit', queue: 0 };
 
-    await acquire();
+    const lim = engine === 'volc' ? volcLim : yunxiLim;
+    const queuedBefore = lim.queued;
+    let acquired = false;
     try {
+      await lim.acquire();
+      acquired = true;
       const buf = engine === 'volc' ? await volcSynth(text) : await yunxiSynth(text);
       writeCache(engine, text, buf);
       if (engine === 'volc') volcDownUntil = 0;
-      return { engine, buf, cache: 'miss' };
+      return { engine, buf, cache: 'miss', queue: queuedBefore };
     } catch (e) {
       lastErr = e;
-      if (engine === 'volc') {
+      /* 排队放弃属于「忙」，不是引擎坏了：不触发冷却，交给下一个引擎 */
+      const busy = /busy:/.test(e.message);
+      if (busy) {
+        console.error('[sx2-tts] ' + engine + ' busy, try next engine:', e.message);
+      } else if (engine === 'volc') {
         volcDownUntil = Date.now() + VOLC_COOLDOWN_MS;
         console.error('[sx2-tts] volc failed, fallback to yunxi:', e.message);
       } else {
         console.error('[sx2-tts] yunxi failed:', e.message);
       }
     } finally {
-      release();
+      if (acquired) lim.release();
     }
   }
   throw lastErr || new Error('no engine available');
 }
 
 function handle(req, res, query) {
+  /* 只给本机看的运行状态（并发峰值、排队数），公网访问一律 403 */
+  if (query.stats === '1') {
+    const ra = String((req && (req.remoteAddress || (req.socket && req.socket.remoteAddress))) || '');
+    /* 只认回环：网关在本机反代，公网请求的 remoteAddress 是真实外部地址 */
+    if (/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(ra)) return sendJson(res, 200, stats());
+    console.error('[sx2-tts] stats denied from ' + JSON.stringify(ra));
+    return sendJson(res, 403, { error: 'forbidden' });
+  }
+
   const text = normalize(query.t || '');
   const prefer = (query.e === 'yunxi' || query.e === 'volc') ? query.e : '';
 
@@ -411,9 +470,18 @@ function sendAudio(res, r) {
     'Cache-Control': 'public, max-age=604800',
     'X-TTS-Engine': r.engine,
     'X-TTS-Cache': r.cache,
+    'X-TTS-Queue': String(r.queue || 0),
     'Access-Control-Allow-Origin': '*'
   });
   res.end(r.buf);
 }
 
-module.exports = { handle };
+function stats() {
+  return {
+    volc: { max: volcLim.max, active: volcLim.active, peak: volcLim.peak, queued: volcLim.queued },
+    yunxi: { max: yunxiLim.max, active: yunxiLim.active, peak: yunxiLim.peak, queued: yunxiLim.queued },
+    cooling: Date.now() < volcDownUntil
+  };
+}
+
+module.exports = { handle, stats };
