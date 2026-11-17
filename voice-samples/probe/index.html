@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>讲解音频后期对比</title>
+<title>讲解音频 · 「啵」声修复对照</title>
 <style>
 *{box-sizing:border-box}
-:root{--bg:#f1f4fa;--card:#fff;--ink:#151c2c;--muted:#6b7588;--line:#e3e8f2;--pri:#4a63d8;--ok:#1f9c66}
+:root{--bg:#f1f4fa;--card:#fff;--ink:#151c2c;--muted:#6b7588;--line:#e3e8f2;--pri:#4a63d8;--ok:#1f9c66;--bad:#dc4f4f}
 body{margin:0;background:var(--bg);color:var(--ink);line-height:1.6;
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
 .wrap{max-width:760px;margin:0 auto;padding:22px 16px 60px}
@@ -15,9 +15,12 @@ h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
 .note{background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px 14px;font-size:12.5px;
   color:var(--muted);line-height:1.85;margin:16px 0}
 .note b{color:var(--ink)}
+.note .hi{color:var(--bad);font-weight:700}
+.note .fix{color:var(--ok);font-weight:700}
 .sent{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 15px 12px;margin:12px 0}
 .sent .txt{font-size:13.5px;color:#3c4763;margin:0 0 12px;line-height:1.7}
 .sent .txt i{font-style:normal;font-size:11px;color:#a3adc2;display:block;margin-bottom:3px}
+.sent .gap{font-size:11.5px;color:#a3adc2;margin:-6px 0 10px;font-variant-numeric:tabular-nums}
 .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
 .btn{border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:9px 8px;font-size:12.5px;
   font-weight:700;color:#3c4763;cursor:pointer;font-family:inherit;text-align:center;transition:.15s}
@@ -25,38 +28,42 @@ h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
 .btn.on{border-color:var(--pri);background:#eef1ff;color:var(--pri);box-shadow:0 0 0 3px rgba(74,99,216,.1)}
 .btn small{display:block;font-size:10px;font-weight:600;color:#a3adc2;margin-top:1px}
 .btn.on small{color:#7b8ce8}
+.btn[data-v="E"]{border-color:#bfe6d2}
+.btn[data-v="E"].on{border-color:var(--ok);background:#eafaf2;color:var(--ok);box-shadow:0 0 0 3px rgba(31,156,102,.12)}
+.btn[data-v="E"].on small{color:#3fae7d}
 .foot{text-align:center;font-size:12px;color:#a3adc2;margin-top:26px;line-height:1.9}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>讲解音频后期对比</h1>
-  <p class="lead">同一句话，五种后期处理。点着听，挑你觉得最干净的。</p>
+  <h1>「啵」声修复对照</h1>
+  <p class="lead">同一句话，三种处理。重点听<b>两句话之间的停顿</b>。</p>
 
   <div class="note">
-    <b>为什么要做这个</b>：火山引擎这条音色输出时，每句开头和结尾各带约 0.3 秒底噪（比说话声只低 20 dB），
-    句子之间的停顿处最容易听成「嘶」声。现在线上用的是第一种，只做了轻度降噪，没有处理首尾。<br>
-    <b>听的时候注意</b>：句子开头那一两秒、最后一个字收尾之后，哪里还有沙沙声。建议用平时给孩子放音量的那个音量听。
+    <b>「啵」是怎么来的</b>：火山这条音色在句号停顿处会带一小段吹气/唇齿杂音（约 −41 dB），
+    原声里被底噪盖住听不出来；一旦做两级降噪，周围安静到 −65 dB，它就变成孤零零一团，
+    听感上就是「啵」。它是真实声音，<span class="hi">降噪压不掉，只能整段填静音</span>。<br>
+    <span class="fix">E 版</span>在两级降噪之外，把句号级停顿（≥0.3 秒）整段替换成真静音，
+    两端各留 30 ms 淡出/淡入，所以不会再「啵」。<br>
+    <b>听法</b>：每句先听 D，再听 E，注意「。 」那个位置上有没有一下闷响。
   </div>
 
   <div id="list"></div>
 
-  <div class="foot">同一个音色、同一段文本，只差后期处理。<br>选好后告诉我第几种，我把 1025 句全部按这个标准重做。</div>
+  <div class="foot">同一个音色、同一段文本，只差后期处理。确认后我把 1025 句全部按 E 重做。</div>
 </div>
 
 <script>
 const SENTS = [
   { key:'g1au3-0', title:'一年级 · 1~5 的认识和加减法', text:'—' },
   { key:'g4bu3-0', title:'四年级 · 运算定律', text:'—' },
-  { key:'g6bu6-3', title:'六年级 · 圆柱与圆锥', text:'—' }
+  { key:'g6bu6-3', title:'六年级 · 整理和复习', text:'—' }
 ];
 
 const VERSIONS = [
-  { id:'raw',      name:'原声',        sub:'不做处理' },
-  { id:'A-now',    name:'现在线上',    sub:'轻度降噪' },
-  { id:'B-trim',   name:'裁首尾',      sub:'切掉噪声段' },
-  { id:'C-anlmdn', name:'裁首尾+降噪', sub:'再加一级' },
-  { id:'D-anlmdn2',name:'裁首尾+两级', sub:'降噪更狠' }
+  { id:'raw', name:'原声',      sub:'不做处理' },
+  { id:'D',   name:'上一轮选的', sub:'裁首尾+两级' },
+  { id:'E',   name:'最终（修复）', sub:'+ 停顿填静音' }
 ];
 
 let cur = null;
@@ -69,8 +76,12 @@ function render(meta) {
 
   document.getElementById('list').innerHTML = SENTS.map(s => {
     const m = map[s.key];
+    const gaps = m && m.gaps && m.gaps.length
+      ? '填静音：' + m.gaps.map(g => g[0].toFixed(2) + '–' + g[1].toFixed(2) + 's').join('、')
+      : '';
     return '<div class="sent">' +
       '<p class="txt"><i>' + s.title + '</i>' + esc(m ? m.text : s.text) + '</p>' +
+      (gaps ? '<p class="gap">' + gaps + '</p>' : '') +
       '<div class="opts">' + VERSIONS.map(v =>
         '<button class="btn" data-k="' + s.key + '" data-v="' + v.id + '">' +
         v.name + '<small>' + v.sub + '</small></button>').join('') +

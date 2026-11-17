@@ -175,10 +175,24 @@ node tools/fix_quiz_dist.js         # 打散正确答案位置（A/B/C 各约三
 知识点文案固定，所以**整批预生成**，页面直接 `<audio src="audio/g4bu3-2.mp3">`，不再实时合成：
 
 - 文件：`learn/audio/<单元id>-<第几步>.mp3`，48kHz 单声道 96kbps
-- 合成：`node tools/dump_say.js g4b > jobs.json` → `python3 tools/gen_audio_book.py jobs.json learn/audio --workers 4`
-- 音色与滤镜和竖式讲解完全一致（昕哥原声 + `afftdn=nr=8:nf=-30,highpass=f=80,lowpass=f=12000`），PCM 走管道给 ffmpeg，不落临时文件
+- 合成：`node tools/dump_say.js g4b > jobs.json` → `python3 tools/gen_audio_book.py jobs.json learn/audio --workers 4 --force`
 - 并发 4（火山账号 10 个名额里有 5 个归本服务，留出余量）
 - 页面加载时只取当前单元的十几句；拿不到静态文件才回落到 `/sx2-tts` 实时合成，再不行才用系统 TTS
+
+#### 后期链（`tools/postproc.py`）
+
+比竖式那套多三步，原因是「啵」声：
+
+| 步骤 | 做什么 | 为什么 |
+|---|---|---|
+| 裁首尾 | 切掉首尾低于 −28 dBFS 的段，前留 120ms、后留 180ms | 火山每句首尾各带约 0.3s 底噪 |
+| **停顿清零** | 句号级停顿（≥300ms、电平低于语音 12dB）整段填真静音，两端 30ms 淡出/淡入 | **降噪后残留的吹气声会变成「啵」** |
+| 边缘淡化 | 首尾各 8ms 淡入淡出 | 防硬切出「嗒」 |
+| 降噪 | `anlmdn ×2 + afftdn(nr=8,nf=-35) + highpass=80 + lowpass=11000` | 两级 anlmdn 压嘶声，`afftdn` 收底噪 |
+
+「啵」的成因值得记一笔：火山在句号停顿处会带一小段吹气/唇齿杂音（约 −41 dB）。原声里噪声底也是 −43 dB，混在一起听不出来；一旦降到 −60 dB 以下，它就变成孤零零的一团，听感就是「啵」。**它是真实声源，降噪压不掉**，只能把整段停顿替换成静音。
+
+试听对照见 `voice-samples/probe/`（同一句三种处理），线上 <https://sx2.9i9i.cn/voice-test/>。
 
 ## 技术要点
 

@@ -1,16 +1,27 @@
-"""给知识点讲解批量生成静态语音：48k PCM → afftdn/highpass/lowpass → mp3
+"""给知识点讲解批量生成静态语音：火山 48k PCM → 裁首尾 + 停顿清零 + 两级降噪 → mp3
 用法：python3 gen_audio.py <jobs.json> <outdir>
 jobs.json: [{"key":"g1au3-0","text":"..."}, ...]
 已存在的文件默认跳过（--force 覆盖）。
+
+后期链见 postproc.py：
+  1. 裁掉首尾低于阈值的噪声段（火山每句首尾各约 0.3 秒）
+  2. 句号级停顿整段填静音（否则降噪后残留的吹气声会变成「啵」）
+  3. 首尾 8 ms 淡入淡出
+  4. 两级 anlmdn + afftdn + 高低通
 """
 import base64, json, os, subprocess, sys, time, uuid, wave, urllib.request, urllib.error
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import postproc
 
 KEY = "f6881428-75b0-43ef-a997-a52d4d9c9865"
 URL = "https://openspeech.bytedance.com/api/v3/tts/unidirectional"
 RES = "seed-icl-2.0"
 MODEL = "seed-tts-2.0-expressive"
 VOICE = "S_bjuVnqqj2"
-FILTER = "afftdn=nr=8:nf=-30,highpass=f=80,lowpass=f=12000"
+# 旧链：只做轻度降噪，首尾噪声与停顿杂音都还在，留作对照
+FILTER_LEGACY = "afftdn=nr=8:nf=-30,highpass=f=80,lowpass=f=12000"
+FILTER = postproc.FILTER
 
 CONTEXT = (
     "保持你本人的自然说话声线，像坐在孩子旁边一道一道讲题。"
@@ -62,13 +73,18 @@ def tts(text):
     return b"".join(parts)
 
 
-def build(pcm, out_path):
-    """PCM 走管道直接给 ffmpeg，不落临时文件（避免与清理策略纠缠）"""
-    subprocess.run(["ffmpeg", "-v", "error", "-y",
-                    "-f", "s16le", "-ar", "48000", "-ac", "1", "-i", "pipe:0",
-                    "-af", FILTER, "-ar", "48000", "-ac", "1",
-                    "-c:a", "libmp3lame", "-b:a", "96k", out_path],
-                   input=pcm, check=True)
+def build(pcm, out_path, thin=False):
+    """完整后期：裁首尾 → 停顿清零 → 边缘淡入淡出 → 降噪滤镜 → mp3
+    thin=True 时跳过停顿清零（只做裁首尾与降噪），用于对照试听。"""
+    if thin:
+        p = postproc.trim(pcm)
+        if p is pcm:
+            p = pcm
+        p = postproc.fade_edges(p)
+    else:
+        p, _gaps = postproc.prepare(pcm)
+    postproc.build(p, out_path, FILTER)
+    return len(p) / 2 / 48000
 
 
 if __name__ == "__main__":
