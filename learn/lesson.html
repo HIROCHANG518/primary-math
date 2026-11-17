@@ -133,11 +133,13 @@ a{color:var(--pri);text-decoration:none}
 <script src="data/lessons/ids.js"></script>
 <script src="js/scenes.js"></script>
 <script>
+/* 单元 id 在 loadBook 与 boot 之间共用，所以放在最外层 */
+const lessonId = new URLSearchParams(location.search).get('id') || (window.LESSON_IDS || [])[0] || '';
+
 function boot() {
 /* ============ 基础 ============ */
 const $ = s => document.querySelector(s);
-const params = new URLSearchParams(location.search);
-const id = params.get('id') || (window.LESSON_IDS || [])[0] || '';
+const id = lessonId;
 const L = (window.LESSONS || {})[id];
 const PROG_KEY = 'learn_prog_v1';
 const prog = (() => { try { return JSON.parse(localStorage.getItem(PROG_KEY) || '{}'); } catch (e) { return {}; } })();
@@ -327,10 +329,10 @@ if (L) {
 
 /* 讲解内容按册存放：g1au3 -> data/lessons/g1a.js，进页面只拉这一册 */
 (function loadBook() {
-  if (!id) return boot();
-  if (window.LESSONS && window.LESSONS[id]) return boot();
+  if (!lessonId) return boot();
+  if (window.LESSONS && window.LESSONS[lessonId]) return boot();
   const s = document.createElement('script');
-  s.src = 'data/lessons/' + id.slice(0, 3) + '.js';
+  s.src = 'data/lessons/' + lessonId.slice(0, 3) + '.js';
   s.onload = boot;
   s.onerror = boot;
   document.head.appendChild(s);
