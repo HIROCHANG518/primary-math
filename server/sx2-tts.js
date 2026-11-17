@@ -23,10 +23,13 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 const CACHE_DIR = process.env.SX2_TTS_CACHE || '/opt/sx2-math/tts-cache';
-/* 后期精修：轻度降噪 + 去掉 80Hz 以下与 12kHz 以上的频段，只用 48k 输入 */
+/* 后期精修与静态讲解音频用同一条链（见 tools/postproc.py）：
+   裁首尾 → 停顿清零 → 边缘淡化 → 两级 anlmdn + afftdn → 限带 80Hz~11kHz，只用 48k 输入 */
 const FFMPEG = process.env.SX2_FFMPEG || '/opt/sweettalk-wework/bin/ffmpeg';
 const FILTER = process.env.SX2_TTS_FILTER
-  || 'afftdn=nr=8:nf=-30,highpass=f=80,lowpass=f=12000';
+  || 'anlmdn=s=7:p=0.002:r=0.002:m=15,'
+   + 'anlmdn=s=5:p=0.002:r=0.002:m=15,'
+   + 'afftdn=nr=8:nf=-35,highpass=f=80,lowpass=f=11000';
 const FFMPEG_OK = (() => { try { return fs.existsSync(FFMPEG); } catch (e) { return false; } })();
 const KEY_FILE = process.env.SX2_TTS_KEYFILE || '/opt/sweettalk-wework/.sx2-tts.key';
 
@@ -168,16 +171,124 @@ function makeLimiter(max, label){
 const volcLim = makeLimiter(VOLC_MAX, 'volc');
 const yunxiLim = makeLimiter(YUNXI_MAX, 'yunxi');
 
-/* ---------------- 后期：降噪 + 限带（48k 输入） ---------------- */
+/* ---------------- 后期：裁首尾 → 停顿清零 → 边缘淡化 → 降噪 → 限带 ----------------
+   与 tools/postproc.py 同一条链，参数保持一致；改一处记得改另一处。
+   为什么要停顿清零：火山在句号停顿处会带一小段吹气/唇齿杂音（约 −41 dBFS），
+   降噪把周围压到 −60 以下后它反而更突出，听感就是「啵」。它是真实声源，压不掉，
+   只能把句号级停顿整段填成真静音。
+------------------------------------------------------------------------- */
+
+const SR = 48000;
+const TRIM_THRESH = 1200;   /* ≈ −28 dBFS，低于它当静音 */
+const TRIM_LEAD = 0.12;     /* 语音前留 120ms */
+const TRIM_TAIL = 0.18;     /* 语音后留 180ms */
+const GAP_REL = 12;         /* 比语音主体电平低 12 dB 的帧算安静 */
+const GAP_MIN = 0.30;       /* 只处理句号级停顿（≥300ms），字间短停顿不动 */
+const GAP_FADE = 0.03;      /* 停顿两端各 30ms 淡出/淡入 */
+const EDGE_FADE = 0.008;    /* 首尾 8ms 淡入淡出 */
+
+function pcmSamples(buf) { return buf.length >> 1; }
+
+function trimPcm(buf) {
+  const n = pcmSamples(buf);
+  if (!n) return buf;
+  let first = -1;
+  let last = -1;
+  for (let i = 0; i < n; i++) {
+    if (Math.abs(buf.readInt16LE(i << 1)) > TRIM_THRESH) { first = i; break; }
+  }
+  for (let i = n - 1; i >= 0; i--) {
+    if (Math.abs(buf.readInt16LE(i << 1)) > TRIM_THRESH) { last = i; break; }
+  }
+  if (first < 0 || last <= first) return buf;
+  const s = Math.max(0, first - Math.round(SR * TRIM_LEAD));
+  const e = Math.min(n, last + Math.round(SR * TRIM_TAIL));
+  return Buffer.from(buf.subarray(s << 1, e << 1));
+}
+
+/* 10ms 一帧的 RMS 电平（dBFS） */
+function frameDb(buf) {
+  const w = Math.round(SR * 0.01);
+  const n = pcmSamples(buf);
+  const db = [];
+  for (let i = 0; i + w <= n; i += w) {
+    let sum = 0;
+    for (let j = 0; j < w; j++) {
+      const v = buf.readInt16LE((i + j) << 1);
+      sum += v * v;
+    }
+    const r = Math.sqrt(sum / w);
+    db.push(r > 0 ? 20 * Math.log10(r / 32768) : -120);
+  }
+  return { db, w };
+}
+
+function findGaps(buf) {
+  const { db, w } = frameDb(buf);
+  if (!db.length) return [];
+  const sorted = db.slice().sort((a, b) => a - b);
+  const speech = sorted[Math.floor(sorted.length * 0.9)];   /* 语音主体电平（90 分位） */
+  const gate = speech - GAP_REL;
+  const need = Math.max(1, Math.round(GAP_MIN / 0.01));
+  const gaps = [];
+  let run = 0;
+  for (let i = 0; i < db.length; i++) {
+    if (db[i] < gate) { run++; continue; }
+    if (run >= need) gaps.push([(i - run) * w, i * w]);
+    run = 0;
+  }
+  if (run >= need) gaps.push([(db.length - run) * w, db.length * w]);
+  return gaps;
+}
+
+function muteGaps(buf) {
+  const a = Buffer.from(buf);
+  const gaps = findGaps(a);
+  if (!gaps.length) return a;
+  const f = Math.max(1, Math.round(SR * GAP_FADE));
+  const n = pcmSamples(a);
+  for (const [s0, e0] of gaps) {
+    const s = Math.max(0, s0);
+    const e = Math.min(n, e0);
+    if (e - s < 2 * f + 2) { a.fill(0, s << 1, e << 1); continue; }
+    for (let i = s; i < s + f; i++) {
+      const v = a.readInt16LE(i << 1);
+      a.writeInt16LE(Math.trunc(v * (1 - (i - s) / f)), i << 1);
+    }
+    a.fill(0, (s + f) << 1, (e - f) << 1);
+    for (let i = e - f; i < e; i++) {
+      const v = a.readInt16LE(i << 1);
+      a.writeInt16LE(Math.trunc(v * ((i - (e - f)) / f)), i << 1);
+    }
+  }
+  return a;
+}
+
+function fadeEdges(buf) {
+  const a = Buffer.from(buf);
+  const n = pcmSamples(a);
+  const f = Math.min(Math.max(1, Math.round(SR * EDGE_FADE)), n >> 1);
+  for (let i = 0; i < f; i++) {
+    const k = i / f;
+    a.writeInt16LE(Math.trunc(a.readInt16LE(i << 1) * k), i << 1);
+    const j = n - 1 - i;
+    a.writeInt16LE(Math.trunc(a.readInt16LE(j << 1) * k), j << 1);
+  }
+  return a;
+}
+
+function preprocess(buf) {
+  return fadeEdges(muteGaps(trimPcm(buf)));
+}
 
 /* 把 48k PCM 或 48k mp3 过一遍滤镜链，输出 48k/96kbps mp3 */
-function polish(buf, inputFormat) {
+function runFfmpeg(buf, inputFormat, af) {
   return new Promise((resolve, reject) => {
     const inArgs = inputFormat === 'pcm'
       ? ['-f', 's16le', '-ar', '48000', '-ac', '1', '-i', 'pipe:0']
       : ['-f', 'mp3', '-i', 'pipe:0'];
     const args = ['-hide_banner', '-v', 'error'].concat(inArgs).concat([
-      '-af', FILTER, '-ar', '48000', '-ac', '1',
+      '-af', af || FILTER, '-ar', '48000', '-ac', '1',
       '-c:a', 'libmp3lame', '-b:a', '96k', '-f', 'mp3', 'pipe:1'
     ]);
     const p = spawn(FFMPEG, args, { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -207,6 +318,65 @@ function polish(buf, inputFormat) {
     p.stdin.on('error', () => { /* 上游已经失败，交给 close */ });
     p.stdin.end(buf);
   });
+}
+
+/* mp3 → 48k 单声道 s16le PCM（云希回来的是 mp3，要先解码才能分析停顿） */
+function decodeToPcm(buf) {
+  return new Promise((resolve, reject) => {
+    const p = spawn(FFMPEG, ['-hide_banner', '-v', 'error',
+      '-f', 'mp3', '-i', 'pipe:0',
+      '-f', 's16le', '-ar', '48000', '-ac', '1', 'pipe:1'], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const out = [];
+    let err = '';
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try { p.kill('SIGKILL'); } catch (e) { /* ignore */ }
+      reject(new Error('decode timeout'));
+    }, 12000);
+    const done = (e, b) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      e ? reject(e) : resolve(b);
+    };
+    p.stdout.on('data', d => out.push(d));
+    p.stderr.on('data', d => { if (err.length < 600) err += d.toString(); });
+    p.on('error', e => done(e));
+    p.on('close', code => {
+      const b = Buffer.concat(out);
+      if (code === 0 && b.length > 2000) done(null, b);
+      else done(new Error('decode exit ' + code + ' ' + err.slice(0, 200)));
+    });
+    p.stdin.on('error', () => { /* 交给 close */ });
+    p.stdin.end(buf);
+  });
+}
+
+async function polish(buf, inputFormat) {
+  let pcm = null;
+  if (inputFormat === 'pcm') {
+    pcm = buf;
+  } else {
+    try {
+      pcm = await decodeToPcm(buf);
+    } catch (e) {
+      /* 解不出来就退回「直接把 mp3 喂滤镜」，至少还能听 */
+      console.error('[sx2-tts] decode failed, filter raw mp3:', e.message);
+    }
+  }
+  if (pcm && pcm.length > 4000) {
+    try {
+      pcm = preprocess(pcm);
+    } catch (e) {
+      console.error('[sx2-tts] preprocess failed, use raw pcm:', e.message);
+      pcm = null;
+    }
+  }
+  if (pcm) return runFfmpeg(pcm, 'pcm');
+  if (inputFormat === 'pcm') throw new Error('preprocess failed on pcm input');
+  return runFfmpeg(buf, 'mp3');
 }
 
 /* ---------------- 引擎一：火山（昕哥音色） ---------------- */
@@ -555,4 +725,5 @@ function stats() {
   };
 }
 
-module.exports = { handle, stats };
+/* _polish / _preprocess 只给本地排查用（tools/ 里偶尔要单独跑一遍后期），线上不调用 */
+module.exports = { handle, stats, _polish: polish, _preprocess: preprocess };

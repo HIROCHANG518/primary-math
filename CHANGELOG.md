@@ -1,5 +1,16 @@
 # 更新日志
 
+## 2026-11-17 · 实时网关同步「停顿清零」链；试听页下线
+
+- **`server/sx2-tts.js` 的 `polish()` 换成与静态课程同一条链**：mp3 输入（云希）先解码成 48k PCM，再裁首尾 → 停顿清零 → 边缘淡化 → `anlmdn×2 + afftdn + highpass/lowpass` → 48k/96kbps mp3；火山本来就是 48k PCM，少一次解码
+- 新增 `decodeToPcm / trimPcm / frameDb / findGaps / muteGaps / fadeEdges / preprocess`，参数与 `tools/postproc.py` 一一对应（阈值 1200、前后留 120/180ms、GAP_REL 12dB、GAP_MIN 300ms、30ms 停顿淡入淡出、8ms 边缘淡化）
+- 默认滤镜由 `afftdn=nr=8:nf=-30,highpass=80,lowpass=12000` 改为 `anlmdn×2 + afftdn(nr=8:nf=-35) + highpass=80,lowpass=11000`；`SX2_TTS_FILTER` 仍可覆盖
+- 实测（网关现合成两句）：rms −22.9 dBFS、峰值 −3 dBFS、静音占比 20–21%，句号停顿 0.83s 段内只剩 ±21（约 −64 dBFS）的 mp3 量化残值；语音段电平不变
+- 本地对照测试：合成「语音—停顿—语音」信号，停顿段峰值 180 → 0，语音段 9178 → 9178（无误伤）；已处理的静态音频再跑一遍时长 6.43→6.40s，其余指标不变（幂等）
+- 清空 `tts-cache`（15 条旧链音频挪到 `tts-cache.old-*`），之后新合成的句子都是新链
+- 临时对照页 `/voice-test/` 下线（备份为 `voice-test.done-*`），样本留在仓库 `voice-samples/probe/`
+- 决策依据：用户三轮对比听不出「啵」的差别，按新链定稿
+
 ## 2026-11-17 · 首页：三个入口铺开，其余页面收到页末
 
 - **新首页 `index.html`**：一句话标题 + 四个数字（33 关 / 94 单元 / 351 要点 / 6 阶错题），下面三张等宽卡片铺陈——计算闯关、知识点讲解、学习统计。每张卡上半是一幅内联 SVG 示意（竖式 + 拨轮 / 动画舞台 + 字幕 / 柱状图 + 六阶点），下半是标题、一句说明、三条能力与主按钮
