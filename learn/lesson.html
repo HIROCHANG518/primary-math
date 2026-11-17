@@ -130,14 +130,15 @@ a{color:var(--pri);text-decoration:none}
 </div>
 
 <script src="data/outline.js"></script>
-<script src="data/lessons.js"></script>
+<script src="data/lessons/ids.js"></script>
 <script src="js/scenes.js"></script>
 <script>
+function boot() {
 /* ============ 基础 ============ */
 const $ = s => document.querySelector(s);
 const params = new URLSearchParams(location.search);
-const id = params.get('id') || Object.keys(LESSONS)[0];
-const L = LESSONS[id];
+const id = params.get('id') || (window.LESSON_IDS || [])[0] || '';
+const L = (window.LESSONS || {})[id];
 const PROG_KEY = 'learn_prog_v1';
 const prog = (() => { try { return JSON.parse(localStorage.getItem(PROG_KEY) || '{}'); } catch (e) { return {}; } })();
 const saveProg = () => { try { localStorage.setItem(PROG_KEY, JSON.stringify(prog)); } catch (e) {} };
@@ -322,6 +323,18 @@ if (L) {
   }, { once: true });
   show(0);
 }
+}
+
+/* 讲解内容按册存放：g1au3 -> data/lessons/g1a.js，进页面只拉这一册 */
+(function loadBook() {
+  if (!id) return boot();
+  if (window.LESSONS && window.LESSONS[id]) return boot();
+  const s = document.createElement('script');
+  s.src = 'data/lessons/' + id.slice(0, 3) + '.js';
+  s.onload = boot;
+  s.onerror = boot;
+  document.head.appendChild(s);
+})();
 </script>
 </body>
 </html>

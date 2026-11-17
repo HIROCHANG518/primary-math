@@ -6,3 +6,6 @@ voice-samples/work/
 
 # 学霸笔记 OCR 的页面图片（208MB，只在本地备查）
 reference/xb-notes/pages/
+
+# 讲解音频是构建产物（1025 句、约 100MB），本地生成后用 tar 部署，不入库
+learn/audio/*.mp3

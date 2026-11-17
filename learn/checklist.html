@@ -54,9 +54,9 @@ td.st{white-space:nowrap}
 </div>
 
 <script src="data/outline.js"></script>
-<script src="data/lessons.js"></script>
+<script src="data/lessons/ids.js"></script>
 <script>
-const ready = new Set(Object.keys(LESSONS));
+const ready = new Set(window.LESSON_IDS || []);
 let totalP = 0, readyP = 0, readyU = 0, totalU = 0;
 
 const rows = OUTLINE.grades.map(g => {

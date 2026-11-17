@@ -110,6 +110,52 @@ afftdn=nr=8:nf=-30,highpass=f=80,lowpass=f=12000
 
 右侧「讲解步骤」默认是空的（只留一句提示），点了「讲解」或「检查」才把每一步列出来，免得孩子先抄答案。
 
+## 知识点讲解站（`/learn/`）
+
+竖式闯关只练计算，`/learn/` 讲的是**教材里的知识点**：一到六年级 12 册、94 个单元、351 个要点，每个单元一节动画课。
+
+| 页面 | 作用 |
+|---|---|
+| `learn/index.html` | 知识点地图：按年级分册列出 94 个单元，标「可学习 / 已掌握」 |
+| `learn/lesson.html?id=g4bu3` | 一节讲解课：动画舞台 + 字幕 + 语音 + 10 道练习 |
+| `learn/checklist.html` | 351 条要点核对表，逐条标是否讲到、是否掌握 |
+
+一节课 = 8~12 步。每步一句话配一个动画，随后 10 道三选一练习，答对 8 题记「已掌握」（进度存 `localStorage: learn_prog_v1`）。
+
+### 动画场景
+
+`learn/js/scenes.js` 提供 30 种场景，内容里只写 `{ t: 'grid', rows: 3, cols: 4 }` 这样的声明，渲染成 SVG；元素按 `data-d` 依次淡入，形成"一步步画出来"的效果。
+
+点阵 / 比大小 / 第几 / 分与合 / 合并 / 去掉 / 0 / 十格图 / 小棒 / 数轴 / 立体图形 / 平面图形 / 分数条 / 钟面 / 数位表 / 条形图 / 角 / 文字 / 竖式 / 网格 / 平均分 / 天平 / 折线图 / 扇形图 / 体积 / 路线 / 月历 / 钱币 / 搭配树 / 图形变换
+
+### 内容怎么维护
+
+内容按**单元片段**存放，改哪个单元只动那一个文件：
+
+```
+learn/data/lessons/src/g4bu3.js     ← 源文件（手写/生成，一个单元一个）
+learn/data/lessons/g4b.js           ← 构建产物（整册，页面按册懒加载）
+learn/data/lessons/ids.js           ← 已上线单元清单（构建时自动生成）
+```
+
+```bash
+node tools/build_book.js            # src/ → 按册产物 + ids.js
+node tools/check_lessons.js         # 结构 / 场景白名单 / 语音可读性 / 题目校验
+node tools/fix_quiz_dist.js         # 打散正确答案位置（A/B/C 各约三分之一）
+```
+
+`check_lessons.js` 会拦住三类常见问题：语音里出现 `+ − × ÷ = < >` 这类会被念错的符号、场景类型拼错、答案全挤在 B。
+
+### 讲解音频是预生成的静态文件
+
+知识点文案固定，所以**整批预生成**，页面直接 `<audio src="audio/g4bu3-2.mp3">`，不再实时合成：
+
+- 文件：`learn/audio/<单元id>-<第几步>.mp3`，48kHz 单声道 96kbps
+- 合成：`node tools/dump_say.js g4b > jobs.json` → `python3 tools/gen_audio_book.py jobs.json learn/audio --workers 4`
+- 音色与滤镜和竖式讲解完全一致（昕哥原声 + `afftdn=nr=8:nf=-30,highpass=f=80,lowpass=f=12000`），PCM 走管道给 ffmpeg，不落临时文件
+- 并发 4（火山账号 10 个名额里有 5 个归本服务，留出余量）
+- 页面加载时只取当前单元的十几句；拿不到静态文件才回落到 `/sx2-tts` 实时合成，再不行才用系统 TTS
+
 ## 技术要点
 
 - 单文件 HTML + 原生 JS，无框架、无构建步骤

@@ -72,11 +72,11 @@ a{color:var(--pri);text-decoration:none}
 </div>
 
 <script src="data/outline.js"></script>
-<script src="data/lessons.js"></script>
+<script src="data/lessons/ids.js"></script>
 <script>
 const PROG_KEY = 'learn_prog_v1';
 const prog = (() => { try { return JSON.parse(localStorage.getItem(PROG_KEY) || '{}'); } catch (e) { return {}; } })();
-const ready = new Set(Object.keys(LESSONS));
+const ready = new Set(window.LESSON_IDS || []);
 let curG = Number(new URLSearchParams(location.search).get('g') || 1);
 
 const allUnits = OUTLINE.grades.reduce((s, g) => s + g.books.reduce((x, b) => x + b.units.length, 0), 0);

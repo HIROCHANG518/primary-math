@@ -63,13 +63,12 @@ def tts(text):
 
 
 def build(pcm, out_path):
-    tmp = out_path + ".pcm"
-    with open(tmp, "wb") as f:
-        f.write(pcm)
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "s16le", "-ar", "48000", "-ac", "1",
-                    "-i", tmp, "-af", FILTER, "-ar", "48000", "-ac", "1",
-                    "-c:a", "libmp3lame", "-b:a", "96k", out_path], check=True)
-    os.remove(tmp)
+    """PCM 走管道直接给 ffmpeg，不落临时文件（避免与清理策略纠缠）"""
+    subprocess.run(["ffmpeg", "-v", "error", "-y",
+                    "-f", "s16le", "-ar", "48000", "-ac", "1", "-i", "pipe:0",
+                    "-af", FILTER, "-ar", "48000", "-ac", "1",
+                    "-c:a", "libmp3lame", "-b:a", "96k", out_path],
+                   input=pcm, check=True)
 
 
 if __name__ == "__main__":

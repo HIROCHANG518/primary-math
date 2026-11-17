@@ -328,7 +328,272 @@
     ).join('');
   }
 
-  const R = { dots, compare, ordinal, split, merge: s => mergeOrLeave(s, 'merge'), leave: s => mergeOrLeave(s, 'leave'), zero, tenframe, rods, numberline, shapes3d, shape, fraction, clock, placevalue, bar, angle, text };
+  /* 竖式：加减乘除 */
+  function columns(s) {
+    const a = String(s.a), b = String(s.b), op = s.op || '+', res = String(s.result === undefined ? '' : s.result);
+    const w = Math.max(a.length, b.length, res.length);
+    const cw = 36, xr = W / 2 + (w * cw) / 2, xl = xr - w * cw - 14;
+    const y = 74;
+    let out = '';
+    out += label(xr, y + 36, a, { anchor: 'end', size: 36, d: 0 });
+    out += label(xl + 6, y + 92, op, { anchor: 'start', size: 30, fill: P, d: 0.25 });
+    out += label(xr, y + 92, b, { anchor: 'end', size: 36, d: 0.25 });
+    out += `<line x1="${xl}" y1="${y + 108}" x2="${xr + 10}" y2="${y + 108}" stroke="${INK}" stroke-width="3" class="fx" data-d="0.5"/>`;
+    if (res) out += label(xr, y + 158, res, { anchor: 'end', size: 36, fill: OK, d: 0.75 });
+    if (s.caption) out += label(W / 2, H - 26, s.caption, { size: 19, fill: MUT, d: 1 });
+    return out;
+  }
+
+  /* 阵列 / 面积网格：行 × 列，前 fill 格着色 */
+  function grid(s) {
+    const rows = s.rows || 3, cols = s.cols || 4;
+    const fill = s.fill === undefined ? rows * cols : s.fill;
+    const c = Math.min(s.cell || 46, 280 / Math.max(rows, cols));
+    const w = cols * c, h = rows * c, x0 = W / 2 - w / 2, y0 = 66;
+    let out = '';
+    for (let r = 0; r < rows; r++) {
+      for (let q = 0; q < cols; q++) {
+        const i = r * cols + q, on = i < fill;
+        out += `<rect x="${x0 + q * c}" y="${y0 + r * c}" width="${c}" height="${c}"
+          fill="${on ? P : '#fff'}" fill-opacity="${on ? '.8' : '0'}" stroke="${LINE}" stroke-width="1.5"
+          class="fx" data-d="${Math.min(0.02 * i, 1.2).toFixed(2)}"/>`;
+      }
+    }
+    if (s.rowLabel) out += label(x0 - 22, y0 + h / 2, s.rowLabel, { size: 17, fill: MUT, d: 1 });
+    if (s.colLabel) out += label(x0 + w / 2, y0 - 14, s.colLabel, { size: 17, fill: MUT, d: 1 });
+    if (s.caption) out += label(W / 2, y0 + h + 40, s.caption, { size: 19, fill: MUT, d: 1.1 });
+    return out;
+  }
+
+  /* 平均分 */
+  function groups(s) {
+    const total = s.total || 12, g = s.groups || 3;
+    const each = s.each || Math.floor(total / g);
+    const r = 13, gap = 34, rowH = 74;
+    const y0 = 96 - ((g - 1) * rowH) / 2 + 40;
+    let out = '';
+    for (let i = 0; i < g; i++) {
+      const n = Math.min(each, total - i * each);
+      const x0 = W / 2 - ((n - 1) * gap) / 2;
+      out += rect(x0 - 26, y0 + i * rowH - 30, (n - 1) * gap + 52, 58, { rx: 14, fill: '#f6f8fd', stroke: LINE, d: i * 0.12 });
+      for (let j = 0; j < n; j++) out += circle(x0 + j * gap, y0 + i * rowH, r, i === 1 ? WARN : P, i * 0.12 + j * 0.06);
+      if (s.showEach) out += label(x0 + (n - 1) * gap + 46, y0 + i * rowH + 7, '每组 ' + n, { anchor: 'start', size: 17, fill: MUT, d: i * 0.12 + 0.3 });
+    }
+    if (s.caption) out += label(W / 2, H - 22, s.caption, { size: 19, fill: MUT, d: 1 });
+    return out;
+  }
+
+  /* 天平 / 等式两边 */
+  function balance(s) {
+    const cx = W / 2, beam = 118, by = 118, py = 250;
+    const tilt = s.tilt || 0;
+    let out = '';
+    out += `<path d="M${cx} ${by} L${cx} ${py}" stroke="${INK}" stroke-width="5" class="fx" data-d="0"/>`;
+    out += `<path d="M${cx - 56} ${py} L${cx + 56} ${py}" stroke="${INK}" stroke-width="5" stroke-linecap="round" class="fx" data-d="0"/>`;
+    out += `<g class="fx" data-d="0.2" style="transform-origin:${cx}px ${by}px;transform:rotate(${tilt}deg)">`
+      + `<line x1="${cx - beam}" y1="${by}" x2="${cx + beam}" y2="${by}" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`;
+    const pan = (x, txt, col) => {
+      const yy = by + 56;
+      return `<line x1="${x}" y1="${by}" x2="${x - 34}" y2="${yy}" stroke="${MUT}" stroke-width="2"/>`
+        + `<line x1="${x}" y1="${by}" x2="${x + 34}" y2="${yy}" stroke="${MUT}" stroke-width="2"/>`
+        + `<rect x="${x - 52}" y="${yy}" width="104" height="46" rx="12" fill="#fff" stroke="${col}" stroke-width="3"/>`
+        + `<text x="${x}" y="${yy + 31}" text-anchor="middle" font-size="21" font-weight="700" fill="${col}">${txt}</text>`;
+    };
+    out += pan(cx - beam, s.left || '12', P) + pan(cx + beam, s.right || '12', OK) + '</g>';
+    if (s.caption) out += label(W / 2, H - 20, s.caption, { size: 19, fill: MUT, d: 0.8 });
+    return out;
+  }
+
+  /* 折线统计图 */
+  function linechart(s) {
+    const pts = s.pts || [3, 7, 5, 9, 6], labels = s.labels || [];
+    const x0 = 72, x1 = W - 56, baseY = 252, topY = 74;
+    const max = Math.max.apply(null, pts), min = Math.min.apply(null, pts);
+    const span = max - min || 1;
+    const dx = pts.length > 1 ? (x1 - x0) / (pts.length - 1) : 0;
+    let out = `<line x1="${x0}" y1="${baseY}" x2="${x1}" y2="${baseY}" stroke="${INK}" stroke-width="2"/>`;
+    out += `<line x1="${x0}" y1="${baseY}" x2="${x0}" y2="${topY}" stroke="${INK}" stroke-width="2"/>`;
+    const X = i => x0 + i * dx;
+    const Y = v => baseY - ((v - min) / span) * 150 - 14;
+    let path = '';
+    pts.forEach((v, i) => { path += (i ? ' L' : 'M') + X(i) + ' ' + Y(v); });
+    out += `<path d="${path}" fill="none" stroke="${P}" stroke-width="3.5" stroke-linejoin="round" class="fx draw" data-d="0.35"/>`;
+    pts.forEach((v, i) => {
+      out += circle(X(i), Y(v), 6, P, 0.5 + i * 0.12);
+      out += label(X(i), Y(v) - 16, String(v), { size: 17, d: 0.5 + i * 0.12 });
+      if (labels[i]) out += label(X(i), baseY + 24, labels[i], { size: 16, fill: MUT, d: 0.5 + i * 0.12 });
+    });
+    if (s.caption) out += label(W / 2, 46, s.caption, { size: 20, d: 0.1 });
+    return out;
+  }
+
+  /* 扇形图 / 百分数 */
+  function pie(s) {
+    const parts = s.parts || [{ v: 40, label: '语文' }, { v: 30, label: '数学' }, { v: 30, label: '英语' }];
+    const cols = [P, WARN, OK, '#a259d6', '#3aa8c8'];
+    const cx = 196, cy = 162, r = 92;
+    const sum = parts.reduce((a, p) => a + p.v, 0) || 1;
+    let ang = -Math.PI / 2, out = '';
+    parts.forEach((p, i) => {
+      const sw = (p.v / sum) * Math.PI * 2;
+      const x2 = cx + Math.cos(ang + sw) * r, y2 = cy + Math.sin(ang + sw) * r;
+      const x1 = cx + Math.cos(ang) * r, y1 = cy + Math.sin(ang) * r;
+      out += `<path d="M${cx} ${cy} L${x1} ${y1} A${r} ${r} 0 ${sw > Math.PI ? 1 : 0} 1 ${x2} ${y2} Z"
+        fill="${cols[i % cols.length]}" fill-opacity=".85" stroke="#fff" stroke-width="2"
+        class="fx" data-d="${0.1 + i * 0.18}"/>`;
+      ang += sw;
+    });
+    parts.forEach((p, i) => {
+      const yy = 96 + i * 40;
+      out += `<rect x="344" y="${yy - 14}" width="16" height="16" rx="4" fill="${cols[i % cols.length]}" class="fx" data-d="${0.4 + i * 0.1}"/>`;
+      out += label(370, yy, p.label + ' ' + Math.round((p.v / sum) * 100) + '%', { anchor: 'start', size: 18, d: 0.45 + i * 0.1 });
+    });
+    if (s.caption) out += label(W / 2, H - 18, s.caption, { size: 19, fill: MUT, d: 0.9 });
+    return out;
+  }
+
+  /* 长方体的体积 */
+  function volume(s) {
+    const a = s.a || 4, b = s.b || 3, c = s.c || 2;
+    const sMax = Math.max(a, b, c);
+    const u = Math.min(46, 170 / sMax);
+    const w = a * u, d = b * u * 0.55, h = c * u;
+    const x0 = W / 2 - (w + d) / 2, y0 = 150 - h / 2;
+    let out = '';
+    out += `<path d="M${x0} ${y0} h${w} v${h} h-${w} z" fill="${P}" fill-opacity=".85" stroke="${P}" stroke-width="2" class="fx" data-d="0"/>`;
+    out += `<path d="M${x0} ${y0} l${d} -${d * 0.7} h${w} l-${d} ${d * 0.7}" fill="${P}" fill-opacity=".35" stroke="${P}" stroke-width="2" class="fx" data-d="0.2"/>`;
+    out += `<path d="M${x0 + w} ${y0 + h} l${d} -${d * 0.7} v-${h} l-${d} ${d * 0.7}" fill="${P}" fill-opacity=".55" stroke="${P}" stroke-width="2" class="fx" data-d="0.35"/>`;
+    out += label(x0 + w / 2, y0 + h + 26, '长 ' + a, { size: 17, fill: MUT, d: 0.6 });
+    out += label(x0 + w + 16, y0 + h + 8, '宽 ' + b, { anchor: 'start', size: 17, fill: MUT, d: 0.65 });
+    out += label(x0 - 12, y0 + h / 2, '高 ' + c, { anchor: 'end', size: 17, fill: MUT, d: 0.7 });
+    out += label(W / 2, H - 44, s.caption || (a + ' × ' + b + ' × ' + c + ' = ' + a * b * c), { size: 24, d: 0.9 });
+    return out;
+  }
+
+  /* 位置与方向：方格地图 */
+  function route(s) {
+    const n = s.grid || 5, c = 44;
+    const x0 = W / 2 - (n * c) / 2 - 24, y0 = 56;
+    let out = '';
+    for (let i = 0; i <= n; i++) {
+      out += `<line x1="${x0}" y1="${y0 + i * c}" x2="${x0 + n * c}" y2="${y0 + i * c}" stroke="${LINE}" stroke-width="1"/>`;
+      out += `<line x1="${x0 + i * c}" y1="${y0}" x2="${x0 + i * c}" y2="${y0 + n * c}" stroke="${LINE}" stroke-width="1"/>`;
+    }
+    const cellC = (p) => ({ x: x0 + (p[0] + 0.5) * c, y: y0 + (n - 0.5 - p[1]) * c });
+    if (s.from) { const p = cellC(s.from); out += circle(p.x, p.y, 15, P, 0.2); out += label(p.x, p.y + 6, '起', { size: 15, fill: '#fff', d: 0.2 }); }
+    if (s.to) { const p = cellC(s.to); out += circle(p.x, p.y, 15, BAD, 0.9); out += label(p.x, p.y + 6, '终', { size: 15, fill: '#fff', d: 0.9 }); }
+    const nx = x0 + n * c + 34, ny = y0 + 30;
+    out += `<g class="fx" data-d="0.1">`;
+    out += `<path d="M${nx} ${ny - 18} l-9 16 h18 z" fill="${INK}"/><text x="${nx}" y="${ny + 18}" text-anchor="middle" font-size="15" font-weight="700" fill="${INK}">北</text>`;
+    out += `<path d="M${nx} ${ny + 62} l-9 -16 h18 z" fill="${MUT}"/><text x="${nx}" y="${ny + 84}" text-anchor="middle" font-size="15" fill="${MUT}">南</text>`;
+    out += `<text x="${nx - 30}" y="${ny + 36}" text-anchor="middle" font-size="15" fill="${MUT}">西</text>`;
+    out += `<text x="${nx + 30}" y="${ny + 36}" text-anchor="middle" font-size="15" fill="${MUT}">东</text></g>`;
+    if (s.caption) out += label(W / 2, H - 16, s.caption, { size: 19, fill: MUT, d: 1 });
+    return out;
+  }
+
+  /* 月历 */
+  function calendar(s) {
+    const days = s.days || 30, start = s.start === undefined ? 0 : s.start, mark = s.mark || [];
+    const cw = 58, x0 = W / 2 - (7 * cw) / 2, y0 = 74;
+    const week = ['日', '一', '二', '三', '四', '五', '六'];
+    let out = '';
+    week.forEach((w, i) => { out += label(x0 + i * cw + cw / 2, y0, w, { size: 15, fill: MUT, d: 0 }); });
+    for (let d = 1; d <= days; d++) {
+      const idx = start + d - 1, r = Math.floor(idx / 7), q = idx % 7;
+      const x = x0 + q * cw, y = y0 + 14 + r * 34;
+      const on = mark.indexOf(d) >= 0;
+      out += `<rect x="${x + 3}" y="${y}" width="${cw - 6}" height="28" rx="7" fill="${on ? WARN : '#fff'}" fill-opacity="${on ? '.9' : '0'}" stroke="${on ? WARN : LINE}" stroke-width="1" class="fx" data-d="${Math.min(0.01 * d, 0.8).toFixed(2)}"/>`;
+      out += label(x + cw / 2, y + 20, String(d), { size: 15, fill: on ? '#fff' : INK, d: Math.min(0.01 * d, 0.8) });
+    }
+    if (s.caption) out += label(W / 2, H - 14, s.caption, { size: 19, fill: MUT, d: 0.9 });
+    return out;
+  }
+
+  /* 人民币 */
+  function money(s) {
+    const items = s.items || [{ v: 10, n: 2 }, { v: 5, n: 1 }];
+    const flat = [];
+    items.forEach(it => { for (let i = 0; i < (it.n || 1); i++) flat.push(it.v); });
+    const bw = 96, bh = 54, gap = 16;
+    const per = Math.min(flat.length, 4);
+    let out = '';
+    flat.forEach((v, i) => {
+      const r = Math.floor(i / 4), q = i % per;
+      const x = W / 2 - (per * (bw + gap) - gap) / 2 + q * (bw + gap);
+      const y = 86 + r * (bh + 22);
+      const col = v >= 20 ? OK : v >= 10 ? P : WARN;
+      out += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="8" fill="#fff" stroke="${col}" stroke-width="2.5" class="fx" data-d="${i * 0.1}"/>`;
+      out += label(x + bw / 2, y + bh / 2 + 9, v + ' 元', { size: 22, fill: col, d: i * 0.1 + 0.05 });
+    });
+    const total = flat.reduce((a, b) => a + b, 0);
+    out += label(W / 2, H - 46, s.caption || ('一共 ' + total + ' 元'), { size: 24, d: 0.9 });
+    return out;
+  }
+
+  /* 搭配 / 韦恩图 */
+  function tree(s) {
+    if (s.kind === 'venn') {
+      const cx = W / 2, cy = 158, r = 86;
+      let out = `<circle cx="${cx - 44}" cy="${cy}" r="${r}" fill="${P}" fill-opacity=".18" stroke="${P}" stroke-width="2.5" class="fx" data-d="0"/>`;
+      out += `<circle cx="${cx + 44}" cy="${cy}" r="${r}" fill="${WARN}" fill-opacity=".18" stroke="${WARN}" stroke-width="2.5" class="fx" data-d="0.2"/>`;
+      out += label(cx - 96, cy - r - 6, s.left || 'A', { size: 19, fill: P, d: 0.4 });
+      out += label(cx + 96, cy - r - 6, s.right || 'B', { size: 19, fill: WARN, d: 0.4 });
+      out += label(cx - 52, cy + 8, s.leftN === undefined ? '' : String(s.leftN), { size: 24, d: 0.5 });
+      out += label(cx + 52, cy + 8, s.rightN === undefined ? '' : String(s.rightN), { size: 24, d: 0.5 });
+      out += label(cx, cy + 8, s.both === undefined ? '' : String(s.both), { size: 24, fill: OK, d: 0.6 });
+      if (s.caption) out += label(W / 2, H - 20, s.caption, { size: 19, fill: MUT, d: 0.8 });
+      return out;
+    }
+    const L = s.left || ['A', 'B'], Rr = s.right || ['1', '2', '3'];
+    const y0 = 92, dy = Math.min(44, 210 / Math.max(L.length, Rr.length));
+    const lx = 150, rx = W - 150;
+    let out = '';
+    L.forEach((t, i) => {
+      const y = y0 + (L.length - 1) * dy / 2 * -1 + i * dy;
+      out += `<rect x="${lx - 46}" y="${y - 18}" width="92" height="36" rx="10" fill="#eef1ff" stroke="${P}" stroke-width="2" class="fx" data-d="${i * 0.1}"/>`;
+      out += label(lx, y + 7, t, { size: 18, fill: P, d: i * 0.1 });
+      Rr.forEach((u, j) => {
+        const yy = y0 - (Rr.length - 1) * dy / 2 + j * dy;
+        out += `<line x1="${lx + 48}" y1="${y}" x2="${rx - 48}" y2="${yy}" stroke="${LINE}" stroke-width="1.6" class="fx" data-d="${0.4 + i * 0.1 + j * 0.05}"/>`;
+      });
+    });
+    Rr.forEach((t, j) => {
+      const y = y0 - (Rr.length - 1) * dy / 2 + j * dy;
+      out += `<rect x="${rx - 46}" y="${y - 18}" width="92" height="36" rx="10" fill="#fff5e8" stroke="${WARN}" stroke-width="2" class="fx" data-d="${j * 0.1}"/>`;
+      out += label(rx, y + 7, t, { size: 18, fill: WARN, d: j * 0.1 });
+    });
+    if (s.caption) out += label(W / 2, H - 16, s.caption, { size: 19, fill: MUT, d: 1 });
+    return out;
+  }
+
+  /* 图形的运动：平移 / 旋转 / 轴对称 */
+  function transform(s) {
+    const kind = s.kind || 'slide';
+    const tri = (x, y, col, d, flip) => `<path d="M${x} ${y + 60} l${flip ? -46 : 46} 0 l${flip ? 46 : -46} -78 z"
+      fill="${col}" fill-opacity=".85" stroke="${col}" stroke-width="2" class="fx" data-d="${d}"/>`;
+    let out = tri(160, 130, P, 0.1);
+    if (kind === 'slide') {
+      out += tri(360, 130, OK, 0.7);
+      out += `<path d="M232 168 h96" stroke="${WARN}" stroke-width="3" stroke-dasharray="7 6" class="fx" data-d="0.4"/>`;
+      out += label(280, 152, '平移', { size: 18, fill: WARN, d: 0.5 });
+    } else if (kind === 'turn') {
+      out += `<g class="fx" data-d="0.7" style="transform-origin:340px 190px;transform:rotate(90deg)">${tri(340, 130, OK, 0)}</g>`;
+      out += `<path d="M270 190 a40 40 0 0 1 40 -40" fill="none" stroke="${WARN}" stroke-width="3" class="fx" data-d="0.4"/>`;
+      out += label(300, 214, '旋转 90°', { size: 18, fill: WARN, d: 0.6 });
+    } else {
+      out += `<line x1="300" y1="40" x2="300" y2="290" stroke="${WARN}" stroke-width="2" stroke-dasharray="7 6" class="fx" data-d="0.3"/>`;
+      out += tri(390, 130, OK, 0.7, true);
+      out += label(300, 306, '对称轴', { size: 17, fill: WARN, d: 0.8 });
+    }
+    if (s.caption) out += label(W / 2, 44, s.caption, { size: 20, d: 0.2 });
+    return out;
+  }
+
+  const R = { dots, compare, ordinal, split, merge: s => mergeOrLeave(s, 'merge'), leave: s => mergeOrLeave(s, 'leave'), zero, tenframe, rods, numberline, shapes3d, shape, fraction, clock, placevalue, bar, angle, text,
+    columns, grid, groups, balance, linechart, pie, volume, route, calendar, money, tree, transform };
+  /* SCENE_TYPES：给内容校验脚本用 */
+  window.SCENE_TYPES = Object.keys(R);
 
   window.SCENES = {
     render(scene) {

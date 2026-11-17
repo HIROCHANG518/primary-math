@@ -1,5 +1,16 @@
 # 更新日志
 
+## 2026-11-17 · 知识点讲解铺满 94 个单元（全量静态配音）
+
+- **12 册、94 个单元、351 个要点全部有课**：`/learn/` 地图不再有「待制作」，核对表 351 条逐条可查
+- 每节 8~12 步动画 + 10 道三选一，答对 8 题记「已掌握」；进度仍只存本机 `localStorage`
+- **场景从 17 种扩到 30 种**：新增竖式（`columns`）、网格（`grid`）、平均分（`groups`）、天平（`balance`）、折线图（`linechart`）、扇形图（`pie`）、体积（`volume`）、方向路线（`route`）、月历（`calendar`）、钱币（`money`）、搭配树/韦恩图（`tree`）、图形变换（`transform`）
+- **架构改成按册懒加载**：内容按单元存 `learn/data/lessons/src/<unitId>.js`，`tools/build_book.js` 合成 12 册 `data/lessons/<book>.js`（20~30KB），`lesson.html` 按 id 前缀只拉当前册；`ids.js` 记录已上线单元
+- **内容校验链**：`tools/check_lessons.js` 查结构、场景白名单、语音里是否混进 `+ − × ÷ = < >`、题目选项与答案下标；`tools/fix_quiz_dist.js` 打散正确答案位置，避免"都选 B"
+- **讲解音频全量预生成**：1025 句 → `learn/audio/<单元id>-<第几步>.mp3`，48kHz 单声道 96kbps，音色与滤镜和竖式讲解一致；`tools/dump_say.js` 导出任务，`tools/gen_audio_book.py` 并发 4 合成（火山名额 5，留余量）
+- ffmpeg 改走 **stdin 管道**，不再写 `.pcm` 临时文件（上一批留下 367 个共 277MB，已清理）
+- 实测：424 句 2 分 21 秒、601 句约 4 分钟；全部 mp3 可完整解码，总时长约 2.4 小时
+
 ## 2026-11-17 · 讲解音频加后期降噪（48k 输入）
 
 - 网关改为向火山要 **48k PCM**（原来是 24k mp3），再走滤镜链输出 48k/96k mp3：
