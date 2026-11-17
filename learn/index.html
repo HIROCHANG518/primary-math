@@ -42,6 +42,7 @@ a{color:var(--pri);text-decoration:none}
 .unit .pts{font-size:11.5px;color:var(--muted);line-height:1.65;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .unit .meta{margin-top:8px;display:flex;align-items:center;gap:6px;font-size:10.5px;color:#9aa5bb}
+.unit .rate{margin-left:auto;font-size:10.5px;color:#7b879f;font-weight:700;font-variant-numeric:tabular-nums}
 .tag{font-size:10px;font-weight:800;border-radius:999px;padding:1px 7px}
 .tag.ready{background:#e7f7ef;color:var(--ok)}
 .tag.study{background:#fff5e6;color:var(--warn)}
@@ -59,6 +60,7 @@ a{color:var(--pri);text-decoration:none}
     <p>按人教版单元顺序，一个单元一节课：动画演示 + 语音讲解 + 10 道题，答对 8 题算掌握。</p>
     <div class="links">
       <a href="../vertical.html">竖式闯关 →</a>
+      <a href="../stats.html">学习统计 →</a>
       <a href="../index.html">知识纲要 →</a>
       <a href="checklist.html">知识点核对表 →</a>
     </div>
@@ -71,6 +73,7 @@ a{color:var(--pri);text-decoration:none}
   <div class="footnote">讲解语音由昕哥音色生成 · 进度只保存在本机浏览器</div>
 </div>
 
+<script src="../js/store.js"></script>
 <script src="data/outline.js"></script>
 <script src="data/lessons/ids.js"></script>
 <script>
@@ -94,6 +97,10 @@ document.getElementById('stats').innerHTML =
 document.getElementById('gtabs').innerHTML = OUTLINE.grades.map(g =>
   '<button class="gtab" data-g="' + g.g + '">' + g.name + '</button>').join('');
 
+function unitStat(id) {
+  try { return (MS.all().learn.units || {})[id] || null; } catch (e) { return null; }
+}
+
 function unitStatus(id) {
   const p = prog[id];
   if (p && p.done) return ['study', '已掌握'];
@@ -113,10 +120,14 @@ function render() {
       const tag = isReady
         ? (st ? '<span class="tag ' + st[0] + '">' + st[1] + '</span>' : '<span class="tag ready">可学习</span>')
         : '<span class="tag todo">待制作</span>';
+      const st2 = unitStat(u.id);
+      const rate = st2 && st2.n ? Math.round(st2.ok / st2.n * 100) : null;
       const inner =
         '<div class="ut"><i style="background:' + g.color + '"></i>' + u.t + '</div>' +
         '<div class="pts">' + u.p.join(' · ') + '</div>' +
-        '<div class="meta">' + u.p.length + ' 个要点 ' + tag + '</div>';
+        '<div class="meta">' + u.p.length + ' 个要点 ' + tag +
+          (rate !== null ? '<span class="rate">' + rate + '% · ' + st2.n + ' 题</span>' : '') +
+        '</div>';
       html += isReady
         ? '<a class="unit" href="lesson.html?id=' + u.id + '">' + inner + '<span class="go">→</span></a>'
         : '<div class="unit todo">' + inner + '</div>';

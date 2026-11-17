@@ -137,7 +137,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 34px;color:var(--muted);f
   <div class="wrap hero-inner">
     <div class="badge">1 – 6 年级 · 人教版</div>
     <h1>小学数学知识<em>纲要</em>与闯关</h1>
-    <p class="lead">六个年级、四个领域（数与代数 / 图形与几何 / 统计与概率 / 综合与实践）的完整知识脉络，配即时判题的闯关练习。竖式计算另有<a href="vertical.html" style="color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;font-weight:700">阶梯闯关版</a>（连对 10 题解锁下一阶梯）；每个单元还有<a href="learn/" style="color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;font-weight:700">知识点讲解</a>（动画 + 语音 + 10 道题）。</p>
+    <p class="lead">六个年级、四个领域（数与代数 / 图形与几何 / 统计与概率 / 综合与实践）的完整知识脉络，配即时判题的闯关练习。竖式计算另有<a href="vertical.html" style="color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;font-weight:700">阶梯闯关版</a>（连对 10 题解锁下一阶梯）；每个单元还有<a href="learn/" style="color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;font-weight:700">知识点讲解</a>（动画 + 语音 + 10 道题）；做过的题、正确率和错题都在<a href="stats.html" style="color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;font-weight:700">学习统计</a>里，错题可分六阶反复练到出本。</p>
     <div class="hero-stats" id="heroStats"></div>
   </div>
 </header>
@@ -168,6 +168,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 34px;color:var(--muted);f
 
 <footer>纲要按人教版（部编）教材单元顺序整理 · 各版本单元名称略有差异，知识点一致 · 键盘 1–4 选答案、Enter 下一题 · 成绩只保存在本机浏览器</footer>
 
+<script src="js/store.js"></script>
 <script>
 /* =========================================================
    1. 大纲数据
@@ -799,6 +800,19 @@ function pick(i){
   s.t++; if(ok) s.c++;
   state.streak = ok ? state.streak + 1 : 0;
   saveStats();
+
+  /* 同步进统一统计与错题本（纲要页的题每次新生成，错题用题干做标识） */
+  try {
+    const t2 = TOPICS[state.g][state.topic];
+    const idx = cur.opts.findIndex(o => same(o, cur.ans));
+    MS.record({
+      kind: 'learn', ok: ok,
+      scope: { id: 'ol:' + state.g + ':' + t2.name, name: t2.name, g: state.g, term: '纲要练习' },
+      snap: { key: cur.q, qi: 0, q: cur.q, a: cur.opts.map(String), k: idx, why: cur.tip },
+      title: String(cur.q).replace(/<[^>]+>/g, ''),
+      sub: '纲要练习 · ' + t2.name
+    });
+  } catch (e) {}
   renderMeter();
   renderHero();
 

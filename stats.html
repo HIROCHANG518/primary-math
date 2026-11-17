@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>学习统计 · 小学数学 1-6 年级</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#f1f4fa;--card:#fff;--ink:#151c2c;--muted:#6b7588;--line:#e3e8f2;
+  --pri:#4a63d8;--pri-soft:#eef1ff;--ok:#1f9c66;--bad:#dc4f4f;--warn:#e8961a;
+  --mono:"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);line-height:1.6;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px 60px}
+a{color:var(--pri);text-decoration:none}
+button{font-family:inherit}
+
+.hero{padding:26px 0 6px}
+.hero h1{margin:0 0 6px;font-size:25px;letter-spacing:-.01em}
+.hero p{margin:0;color:var(--muted);font-size:13.5px}
+.hero .links{margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px}
+.hero .links a{border-bottom:1px solid rgba(74,99,216,.28)}
+
+/* 概览卡 */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin:18px 0 4px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi b small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}
+.kpi span{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.kpi i{display:block;height:5px;border-radius:3px;background:#eef1f8;margin-top:8px;overflow:hidden}
+.kpi i em{display:block;height:100%;border-radius:3px;background:var(--pri)}
+.kpi.ok b{color:var(--ok)} .kpi.ok i em{background:var(--ok)}
+.kpi.bad b{color:var(--bad)} .kpi.bad i em{background:var(--bad)}
+
+/* 趋势 */
+.block{margin:22px 0 0}
+.block h2{margin:0 0 10px;font-size:13px;font-weight:800;letter-spacing:.05em;color:#98a2b8}
+.trend{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px 12px 8px}
+.tbars{display:flex;align-items:flex-end;gap:4px;height:104px}
+.tb{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px}
+.tb b{font-size:9.5px;color:#a3adc2;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.tb i{width:100%;max-width:26px;background:#dfe6f6;border-radius:4px 4px 2px 2px;min-height:2px;transition:height .3s}
+.tb.has i{background:linear-gradient(#7f93e8,#4a63d8)}
+.tb span{font-size:9px;color:#a3adc2;margin-top:3px;white-space:nowrap}
+.tnote{font-size:11px;color:#98a2b8;margin:8px 2px 0;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+
+/* 页签 */
+.tabs{display:flex;gap:6px;margin:22px 0 12px;flex-wrap:wrap;position:sticky;top:0;z-index:20;
+  background:linear-gradient(var(--bg) 78%,rgba(241,244,250,0));padding:6px 0 8px}
+.tab{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 14px;font-size:12.5px;
+  font-weight:700;color:#68738c;cursor:pointer;transition:.14s}
+.tab:hover{border-color:#c2cce8}
+.tab.on{background:#1d2739;border-color:#1d2739;color:#fff}
+.tab .n{display:inline-block;margin-left:5px;font-size:10.5px;opacity:.7;font-variant-numeric:tabular-nums}
+
+/* 行 */
+.grp{margin:0 0 8px}
+.grp>h3{margin:14px 0 7px;font-size:12px;font-weight:800;color:#68738c;letter-spacing:.04em;
+  display:flex;align-items:center;gap:8px}
+.grp>h3 em{font-style:normal;font-weight:600;color:#a3adc2;font-size:11px}
+.rows{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:9px 13px;border-top:1px solid #eef1f8;font-size:13px}
+.row:first-child{border-top:none}
+.row .nm{flex:1;min-width:0}
+.row .nm b{display:block;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm span{display:block;font-size:10.5px;color:#a3adc2;margin-top:1px}
+.row .bar{width:88px;height:5px;border-radius:3px;background:#eef1f8;flex:0 0 auto;overflow:hidden}
+.row .bar i{display:block;height:100%;border-radius:3px;background:var(--pri)}
+.row .bar.low i{background:var(--bad)} .row .bar.mid i{background:var(--warn)} .row .bar.hi i{background:var(--ok)}
+.row .num{width:88px;text-align:right;flex:0 0 auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.row .num b{color:var(--ink);font-size:12.5px}
+.tag{font-size:10px;font-weight:800;border-radius:999px;padding:2px 8px;flex:0 0 auto;white-space:nowrap}
+.tag.ok{background:#e7f7ef;color:var(--ok)}
+.tag.mid{background:#fff5e6;color:var(--warn)}
+.tag.todo{background:#f1f4fa;color:#9aa5bb}
+.row.dim{opacity:.55}
+/* 册折叠 */
+.bookhd{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;
+  background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 13px;margin:9px 0 0;font-size:13px;font-weight:800}
+.bookhd .arw{font-size:9px;color:#a3adc2;transition:transform .18s}
+.bookhd.open .arw{transform:rotate(90deg)}
+.bookhd em{font-style:normal;font-weight:600;font-size:11px;color:#a3adc2;margin-left:auto}
+.bookbody{display:none}
+.bookbody.open{display:block}
+.bookbody .rows{border-radius:0 0 14px 14px;border-top:none}
+
+/* 错题本 */
+.explain{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:12px;
+  color:var(--muted);line-height:1.8;margin-bottom:12px}
+.explain b{color:var(--ink)}
+.lvbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.lvbtn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;font-size:12px;
+  font-weight:700;color:#68738c;cursor:pointer;display:flex;align-items:center;gap:6px}
+.lvbtn .c{font-size:10.5px;background:#f1f4fa;color:#8b96ad;border-radius:999px;padding:0 6px;min-width:18px;text-align:center}
+.lvbtn.on{background:#1d2739;border-color:#1d2739;color:#fff}
+.lvbtn.on .c{background:rgba(255,255,255,.18);color:#fff}
+.lvbtn.zero{opacity:.5}
+.acts2{display:flex;gap:9px;flex-wrap:wrap;margin:0 0 12px}
+.btn{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:11px;padding:9px 15px;
+  font-size:13px;font-weight:700;color:#3c4763;cursor:pointer;text-align:center}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* 知识点练习 */
+.quizwrap{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px}
+.qhead{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.qtext{font-size:16.5px;font-weight:700;line-height:1.6;margin:6px 0 14px}
+.opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:1.5px solid var(--line);
+  background:#fff;border-radius:12px;padding:11px 13px;font-size:14px;margin-bottom:8px;cursor:pointer;color:var(--ink)}
+.opt:hover{border-color:#c2cce8;background:#fafbff}
+.opt .k{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:#f1f4fa;color:#7b879f;
+  font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.opt.right{border-color:var(--ok);background:#effaf4}
+.opt.right .k{background:var(--ok);color:#fff}
+.opt.wrong{border-color:var(--bad);background:#fdf1f1}
+.opt.wrong .k{background:var(--bad);color:#fff}
+.opt[disabled]{cursor:default}
+.why{display:none;font-size:12.5px;color:#4b566e;background:#f7f9fd;border-left:3px solid var(--pri);
+  border-radius:0 8px 8px 0;padding:9px 12px;line-height:1.75;margin-top:4px}
+.why.show{display:block}
+.why b{color:var(--ink)}
+.qfoot{display:flex;justify-content:flex-end;margin-top:14px}
+.rvsum{text-align:center;padding:22px 8px}
+.rvsum .big{font-size:40px;font-weight:800;color:var(--pri);line-height:1.05;font-variant-numeric:tabular-nums}
+.rvsum h3{margin:0 0 6px;font-size:19px}
+.rvsum .rows2{display:flex;gap:10px;justify-content:center;margin:16px 0;flex-wrap:wrap}
+.rvsum .rows2 div{background:#f6f8fd;border:1px solid var(--line);border-radius:11px;padding:8px 16px;min-width:100px}
+.rvsum .rows2 b{display:block;font-size:20px}
+.rvsum .rows2 span{font-size:11px;color:var(--muted)}
+
+/* 最近记录 */
+.hlist{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.hrow{display:flex;align-items:center;gap:10px;padding:10px 13px;border-top:1px solid #eef1f8;font-size:12.5px}
+.hrow:first-child{border-top:none}
+.hrow .dot{width:6px;height:6px;border-radius:50%;flex:0 0 auto;background:var(--pri)}
+.hrow .dot.l{background:var(--warn)}
+.hrow .s{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .n{color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.hrow .t{color:#a3adc2;font-size:10.5px;flex:0 0 auto;min-width:52px;text-align:right}
+
+.empty{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:26px 16px;text-align:center;
+  color:var(--muted);font-size:13px;line-height:1.9}
+.foot{margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:11.5px;color:#a3adc2}
+.foot button{background:none;border:none;color:#a3adc2;font-size:11.5px;cursor:pointer;text-decoration:underline;padding:0}
+.foot button.danger{color:#c98b8b}
+.footnote{font-size:11.5px;color:#9aa5bb;text-align:center;margin-top:26px;line-height:1.9}
+@media (max-width:560px){
+  .row .bar{display:none}
+  .row .num{width:auto;text-align:right}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .kpi:last-child{grid-column:span 2}
+  .tb span{font-size:0}
+  .tb:nth-child(2n+1) span{font-size:8.5px}
+  .bookhd em{font-size:10px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>学习统计</h1>
+    <p>做过的题、正确率、错题都在这儿。数据只保存在这台设备的浏览器里。</p>
+    <div class="links">
+      <a href="vertical.html">竖式闯关 →</a>
+      <a href="learn/">知识点讲解 →</a>
+      <a href="index.html">知识纲要 →</a>
+    </div>
+  </div>
+
+  <div class="cards" id="overview"></div>
+
+  <div class="block">
+    <h2>最近 14 天</h2>
+    <div class="trend">
+      <div class="tbars" id="tbars"></div>
+      <div class="tnote" id="tnote"></div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-t="calc">计算闯关<span class="n" id="tabCalcN"></span></button>
+    <button class="tab" data-t="learn">知识点<span class="n" id="tabLearnN"></span></button>
+    <button class="tab" data-t="wrong">错题本<span class="n" id="tabWrongN"></span></button>
+    <button class="tab" data-t="hist">最近记录</button>
+  </div>
+
+  <div id="pane"></div>
+
+  <div class="foot">
+    <button id="btnExport">导出数据</button>
+    <button class="danger" id="btnResetAll">清空全部统计</button>
+  </div>
+  <div class="footnote">计算题按「一道竖式全对」记一次答对，知识点按「一次选择」记一次。<br>错题练习也计入题量与正确率。</div>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/stages-meta.js"></script>
+<script src="learn/data/outline.js"></script>
+<script>
+/* ============ 工具 ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+
+function ago(ts) {
+  if (!ts) return '';
+  const d = Date.now() - ts;
+  if (d < 60000) return '刚刚';
+  if (d < 3600000) return Math.floor(d / 60000) + ' 分钟前';
+  if (d < 86400000) return Math.floor(d / 3600000) + ' 小时前';
+  if (d < 7 * 86400000) return Math.floor(d / 86400000) + ' 天前';
+  const x = new Date(ts);
+  return (x.getMonth() + 1) + '/' + x.getDate();
+}
+const LV_NAME = ['', '一阶', '二阶', '三阶', '四阶', '五阶', '六阶'];
+
+/* ============ 概览 ============ */
+function renderOverview() {
+  const s = MS.summary();
+  const n = s.calc.n + s.learn.n, ok = s.calc.ok + s.learn.ok;
+  const box = (cls, big, unit, label, bar, sub) =>
+    '<div class="kpi ' + cls + '"><b>' + big + (unit ? '<small>' + unit + '</small>' : '') + '</b>' +
+    '<span>' + label + '</span>' + (bar != null ? '<i><em style="width:' + bar + '%"></em></i>' : '') +
+    (sub ? '<span style="margin-top:6px;color:#a3adc2">' + sub + '</span>' : '') + '</div>';
+
+  $('#overview').innerHTML =
+    box('', n, ' 题', '一共做过', null,
+      '计算 ' + s.calc.n + ' · 知识点 ' + s.learn.n) +
+    box(ok && pct(ok, n) >= 80 ? 'ok' : '', n ? pct(ok, n) : 0, '%', '总正确率', n ? pct(ok, n) : 0,
+      '对 ' + ok + ' 题') +
+    box('bad', s.wrongPending, ' 道', '待复习错题', null,
+      '已出本 ' + s.wrongGrad + ' 道') +
+    box('ok', s.learn.unitsDone, ' 个', '已掌握单元', null,
+      '学过的 ' + s.learn.unitsTouched + ' 个') +
+    box('', s.calc.stagesPassed, ' 关', '已通关卡', null,
+      '练过的 ' + s.calc.stagesTouched + ' 关');
+}
+
+/* ============ 趋势 ============ */
+function renderTrend() {
+  const t = MS.trend(14);
+  const max = Math.max(10, ...t.map(x => x.n));
+  const total = t.reduce((a, b) => a + b.n, 0);
+  const oks = t.reduce((a, b) => a + b.ok, 0);
+
+  $('#tbars').innerHTML = t.map(x => {
+    const h = Math.round(x.n / max * 100);
+    return '<div class="tb' + (x.n ? ' has' : '') + '" title="' + x.day + ' · ' + x.n + ' 题，对 ' + x.ok + ' 题">' +
+      (x.n ? '<b>' + x.n + '</b>' : '') +
+      '<i style="height:' + Math.max(x.n ? 6 : 2, h) + '%"></i>' +
+      '<span>' + x.label + '</span></div>';
+  }).join('');
+
+  $('#tnote').innerHTML =
+    '<span>14 天共 ' + total + ' 题' + (total ? '，对 ' + oks + ' 题（' + pct(oks, total) + '%）' : '') + '</span>' +
+    '<span>柱子越高做题越多</span>';
+}
+
+/* ============ 计算闯关 ============ */
+function renderCalc() {
+  const meta = window.STAGES_FLAT || [];
+  const db = MS.all();
+  const st = db.calc.stages;
+  const touched = Object.keys(st).length;
+  const passed = Object.keys(st).filter(k => st[k].pass).length;
+
+  let html = '<div class="explain">' +
+    '<b>学过的范围</b>：33 关里练过 <b>' + touched + '</b> 关，连对 10 题通过 <b>' + passed + '</b> 关。' +
+    '每关要连对 10 题才算过，所以正确率低不一定没学会，可能是还没连上。' +
+    '</div>';
+
+  const byGrade = {};
+  meta.forEach(x => { (byGrade[x.g] = byGrade[x.g] || { name: x.gn, list: [] }).list.push(x); });
+
+  Object.keys(byGrade).sort().forEach(g => {
+    const box = byGrade[g];
+    let gn = 0, gok = 0, doneN = 0;
+    const rows = box.list.map(x => {
+      const d = st[String(x.idx)];
+      if (d) { gn += d.n; gok += d.ok; }
+      if (d && d.pass) doneN++;
+      const r = d ? pct(d.ok, d.n) : null;
+      const cls = r == null ? '' : (r >= 85 ? 'hi' : r >= 60 ? 'mid' : 'low');
+      const tag = !d ? '<span class="tag todo">没练过</span>'
+        : d.pass ? '<span class="tag ok">已通关</span>'
+        : '<span class="tag mid">练习中</span>';
+      return '<div class="row' + (d ? '' : ' dim') + '">' +
+        '<div class="nm"><b>' + esc(x.label) + '</b>' +
+        '<span>' + (d ? '上次 ' + ago(d.last) + ' · 连对达标' + (d.pass ? ' ✓' : ' 未达') : '还没有做过') + '</span></div>' +
+        '<div class="bar ' + cls + '"><i style="width:' + (r == null ? 0 : r) + '%"></i></div>' +
+        '<div class="num">' + (d ? '<b>' + r + '%</b> · ' + d.n + ' 题' : '—') + '</div>' +
+        tag + '</div>';
+    }).join('');
+    html += '<div class="grp"><h3>' + esc(box.name) +
+      '<em>' + (gn ? '对 ' + gok + '/' + gn + ' 题（' + pct(gok, gn) + '%） · ' + doneN + '/' + box.list.length + ' 关通过' : '还没练') + '</em></h3>' +
+      '<div class="rows">' + rows + '</div></div>';
+  });
+
+  $('#pane').innerHTML = html;
+}
+
+/* ============ 知识点 ============ */
+function renderLearn() {
+  const O = window.OUTLINE;
+  const db = MS.all();
+  const un = db.learn.units;
+  const keys = Object.keys(un);
+
+  const s = MS.summary();
+  let html = '<div class="explain">' +
+    '<b>学过的范围</b>：94 个单元里学过 <b>' + s.learn.unitsTouched + '</b> 个，答对 8 题以上记掌握 <b>' + s.learn.unitsDone + '</b> 个。' +
+    '每个单元 10 道题，正确率按每次作答累计。' +
+    '</div>';
+
+  if (!O) { $('#pane').innerHTML = html + '<div class="empty">单元清单还没加载出来</div>'; return; }
+
+  O.grades.forEach(g => {
+    g.books.forEach(b => {
+      const units = b.units || [];
+      const bookKey = units.length ? units[0].id.slice(0, 3) : ('g' + g.g + (b.term === '上册' ? 'a' : 'b'));
+      const has = units.some(u => un[u.id]);
+      let bn = 0, bok = 0, bdone = 0;
+      units.forEach(u => {
+        const d = un[u.id];
+        if (d) { bn += d.n; bok += d.ok; if (d.pass) bdone++; }
+      });
+
+      const rows = units.map(u => {
+        const d = un[u.id];
+        const hasQ = d && d.n > 0;
+        const r = hasQ ? pct(d.ok, d.n) : null;
+        const cls = r == null ? '' : (r >= 85 ? 'hi' : r >= 60 ? 'mid' : 'low');
+        const tag = !d ? '<span class="tag todo">没学过</span>'
+          : d.pass ? '<span class="tag ok">已掌握</span>'
+          : '<span class="tag mid">待巩固</span>';
+        const best = d && d.best != null ? (d.bestTotal ? d.best + '/' + d.bestTotal : d.best) : null;
+        const when = d ? (d.last ? ' · 上次 ' + ago(d.last) : ' · 之前做过') : ' · 还没有做过';
+        return '<div class="row' + (d ? '' : ' dim') + '">' +
+          '<div class="nm"><b>' + esc(u.t) + '</b>' +
+          '<span>' + esc(u.id) + when + (best ? ' · 最好 ' + best : '') + '</span></div>' +
+          '<div class="bar ' + cls + '"><i style="width:' + (r == null ? 0 : r) + '%"></i></div>' +
+          '<div class="num">' + (hasQ ? '<b>' + r + '%</b> · ' + d.n + ' 题'
+            : (d ? '<span style="color:#a3adc2">只有成绩</span>' : '—')) + '</div>' +
+          tag + '</div>';
+      }).join('');
+
+      const open = has ? ' open' : '';
+      html += '<div class="bookhd' + open + '" data-book="' + bookKey + '">' +
+        '<span class="arw">▶</span><span>' + esc(g.name) + ' · ' + esc(b.term) + '</span>' +
+        '<em>' + units.length + ' 单元' + (bn ? ' · ' + bn + ' 题 · ' + pct(bok, bn) + '% · 掌握 ' + bdone : ' · 还没学过') + '</em></div>' +
+        '<div class="bookbody' + open + '" data-body="' + bookKey + '">' +
+        '<div class="rows">' + rows + '</div></div>';
+    });
+  });
+
+  /* 纲要页的即时练习不属于任何单元，单独汇总一行 */
+  const ol = keys.filter(k => k.indexOf('ol:') === 0);
+  if (ol.length) {
+    const byG = {};
+    ol.forEach(k => {
+      const u = un[k];
+      const b = byG[u.g] || (byG[u.g] = { n: 0, ok: 0, topics: 0 });
+      b.n += u.n; b.ok += u.ok; b.topics++;
+    });
+    html += '<div class="grp"><h3>纲要页即时练习<em>不挂在具体单元上，按年级汇总</em></h3><div class="rows">' +
+      Object.keys(byG).sort((a, b) => a - b).map(g => {
+        const b = byG[g];
+        const r = pct(b.ok, b.n);
+        const cls = r >= 85 ? 'hi' : r >= 60 ? 'mid' : 'low';
+        return '<div class="row">' +
+          '<div class="nm"><b>' + g + ' 年级</b><span>' + b.topics + ' 个知识点有记录</span></div>' +
+          '<div class="bar ' + cls + '"><i style="width:' + r + '%"></i></div>' +
+          '<div class="num"><b>' + r + '%</b> · ' + b.n + ' 题</div>' +
+          '<span class="tag todo">纲要练习</span></div>';
+      }).join('') + '</div></div>';
+  }
+
+  $('#pane').innerHTML = html;
+  document.querySelectorAll('.bookhd').forEach(h => {
+    h.addEventListener('click', () => {
+      h.classList.toggle('open');
+      const b = document.querySelector('.bookbody[data-body="' + h.dataset.book + '"]');
+      if (b) b.classList.toggle('open');
+    });
+  });
+}
+
+/* ============ 错题本 ============ */
+let curLv = 1;
+let quiz = null;         /* 知识点错题练习状态 */
+
+function renderWrong() {
+  const s = MS.summary();
+  const w = s.wrong;
+  const zero = v => v ? '' : ' zero';
+
+  let html = '<div class="explain">' +
+    '<b>错题怎么练</b>：做错的题自动进来，属于一阶。练一遍答对就升到二阶，答错退回一阶。' +
+    '二阶再对升三阶……一直升到六阶都答对，这道题就<b>出本</b>，记进「已掌握」。' +
+    '平时做题又错了同一道，也会退回一阶。' +
+    '</div>';
+
+  html += '<div class="lvbar">';
+  for (let i = 1; i <= 6; i++) {
+    html += '<button class="lvbtn' + (curLv === i ? ' on' : '') + zero(w[i]) + '" data-lv="' + i + '">' +
+      LV_NAME[i] + '<span class="c">' + w[i] + '</span></button>';
+  }
+  html += '<button class="lvbtn' + (curLv === 'grad' ? ' on' : '') + zero(w.grad) + '" data-lv="grad">' +
+    '已掌握<span class="c">' + w.grad + '</span></button></div>';
+
+  const list = MS.wrongList(curLv);
+  const calcList = list.filter(r => r.k === 'c');
+  const learnList = list.filter(r => r.k === 'l');
+
+  if (curLv === 'grad') {
+    html += '<div class="explain">这些题已经连续答对六轮，暂时从错题本出本了。要是以后又做错，会自动回到一阶。</div>';
+  } else if (list.length) {
+    html += '<div class="acts2">';
+    if (calcList.length) html += '<a class="btn pri" href="vertical.html?review=' + curLv + '">练计算错题（' + calcList.length + ' 道）</a>';
+    if (learnList.length) html += '<button class="btn' + (calcList.length ? '' : ' pri') + '" id="btnLearnReview">练知识点错题（' + learnList.length + ' 道）</button>';
+    html += '</div>';
+  }
+
+  if (!list.length) {
+    html += '<div class="empty">' + (curLv === 'grad'
+      ? '还没有出本的题。<br>把错题一路练到六阶，就会出现在这里。'
+      : '第 ' + curLv + ' 阶暂时没有错题。<br>' + (curLv === 1 ? '做错的题会自动进来。' : '把下一阶的题练对，就会升上来。')) + '</div>';
+    $('#pane').innerHTML = html;
+    bindLv();
+    return;
+  }
+
+  const rows = list.map(r => {
+    const isCalc = r.k === 'c';
+    const title = isCalc ? (r.snap ? r.snap.expr : r.title) : (r.snap ? r.snap.q : r.title);
+    const sub = isCalc
+      ? esc(r.sub || '') + ' · 错过 ' + r.n + ' 次'
+      : esc(r.sub || '') + ' · 第 ' + ((r.snap ? r.snap.qi : 0) + 1) + ' 题 · 错过 ' + r.n + ' 次';
+    return '<div class="row">' +
+      '<div class="nm"><b>' + esc(title) + '</b><span>' + sub + ' · ' + ago(r.last) + '</span></div>' +
+      '<span class="tag ' + (isCalc ? 'mid' : 'todo') + '">' + (isCalc ? '计算' : '知识点') + '</span>' +
+      '</div>';
+  }).join('');
+
+  html += '<div class="rows">' + rows + '</div>';
+  $('#pane').innerHTML = html;
+  bindLv();
+
+  const bl = $('#btnLearnReview');
+  if (bl) bl.addEventListener('click', () => startLearnReview(learnList, curLv));
+}
+
+function bindLv() {
+  document.querySelectorAll('.lvbtn').forEach(b => {
+    b.addEventListener('click', () => {
+      curLv = b.dataset.lv === 'grad' ? 'grad' : Number(b.dataset.lv);
+      renderWrong();
+    });
+  });
+}
+
+/* ============ 知识点错题练习（页内） ============ */
+function shuffleQ(snap) {
+  const order = snap.a.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = order[i]; order[i] = order[j]; order[j] = t;
+  }
+  return { q: snap.q, a: order.map(i => snap.a[i]), k: order.indexOf(snap.k), why: snap.why };
+}
+
+function startLearnReview(list, lv) {
+  const items = list.filter(r => r.k === 'l' && r.snap && Array.isArray(r.snap.a));
+  if (!items.length) return;
+  quiz = { list: items, lv: lv, i: 0, ok: 0, bad: 0, right: 0 };
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  drawQuiz();
+}
+
+function drawQuiz() {
+  const qz = quiz;
+  if (!qz) return;
+  if (qz.i >= qz.list.length) { drawQuizSum(); return; }
+
+  const rec = qz.list[qz.i];
+  const q = qz.cur || (qz.cur = shuffleQ(rec.snap));
+
+  $('#pane').innerHTML =
+    '<div class="quizwrap">' +
+      '<div class="qhead"><span>错题练习 · 第 ' + qz.lv + ' 阶 · ' + (qz.i + 1) + ' / ' + qz.list.length + '</span>' +
+      '<span>对 ' + qz.ok + ' · 错 ' + qz.bad + '</span></div>' +
+      '<div class="qtext">' + esc(q.q) + '</div>' +
+      '<div id="opts">' + q.a.map((t, i) =>
+        '<button class="opt" data-i="' + i + '"><span class="k">' + 'ABC'[i] + '</span><span>' + esc(t) + '</span></button>').join('') + '</div>' +
+      '<div class="why" id="why"></div>' +
+      '<div class="qfoot"><button class="btn pri" id="btnQNext" style="display:none">下一题</button></div>' +
+    '</div>';
+
+  document.querySelectorAll('.opt').forEach(b => {
+    b.addEventListener('click', () => answerQuiz(Number(b.dataset.i), b));
+  });
+}
+
+function answerQuiz(i, btn) {
+  const qz = quiz, rec = qz.list[qz.i], q = qz.cur;
+  const ok = (i === q.k);
+  document.querySelectorAll('.opt').forEach(o => { o.disabled = true; });
+  document.querySelectorAll('.opt')[q.k].classList.add('right');
+  if (!ok) btn.classList.add('wrong');
+
+  const after = MS.review(rec.id, ok);
+  if (ok) qz.ok++; else qz.bad++;
+
+  let tip = '';
+  if (ok) tip = after && after.grad ? '这道题六阶都过了，出本。' : '答对，升到第 ' + Math.min(after ? after.lv : 2, 6) + ' 阶。';
+  else tip = '又错了，退回一阶。';
+
+  const why = $('#why');
+  why.innerHTML = '<b>' + (ok ? '对了。' : '再看一下。') + '</b>' + esc(q.why) +
+    '<br><span style="color:#7b879f">' + esc(tip) + '</span>';
+  why.classList.add('show');
+
+  const n = $('#btnQNext');
+  n.style.display = '';
+  n.textContent = (qz.i === qz.list.length - 1) ? '看看结果' : '下一题';
+  n.addEventListener('click', () => { qz.i++; qz.cur = null; drawQuiz(); });
+}
+
+function drawQuizSum() {
+  const qz = quiz;
+  const total = qz.list.length;
+  const rate = pct(qz.ok, total);
+  const lv = qz.lv;
+  const nxt = lv < 6 ? MS.wrongList(lv + 1).filter(r => r.k === 'l').length : 0;
+  const cur = MS.wrongList(lv).filter(r => r.k === 'l').length;
+
+  $('#pane').innerHTML =
+    '<div class="quizwrap rvsum">' +
+      '<h3>第 ' + lv + ' 阶知识点错题练完了</h3>' +
+      '<div class="big">' + rate + '%</div>' +
+      '<p style="color:#6b7588;font-size:13px;margin:2px 0 0">做对 ' + qz.ok + ' 题，做错 ' + qz.bad + ' 题</p>' +
+      '<div class="rows2">' +
+        '<div><b>' + qz.ok + '</b><span>升到第 ' + Math.min(lv + 1, 6) + ' 阶</span></div>' +
+        '<div><b>' + qz.bad + '</b><span>退回一阶</span></div>' +
+        '<div><b>' + cur + '</b><span>本阶还剩</span></div>' +
+      '</div>' +
+      '<div class="acts2" style="justify-content:center">' +
+        (cur > 0 ? '<button class="btn" id="btnAgain">再练一遍（' + cur + '）</button>' : '') +
+        (nxt > 0 ? '<button class="btn pri" id="btnUp">进入第 ' + (lv + 1) + ' 阶（' + nxt + '）</button>' : '') +
+        '<button class="btn ghost" id="btnBack">回到错题本</button>' +
+      '</div>' +
+    '</div>';
+
+  const back = () => { quiz = null; renderWrong(); document.querySelectorAll('.tab').forEach(t => { if (t.dataset.t === 'wrong') t.classList.add('on'); }); };
+  $('#btnBack').addEventListener('click', back);
+  if ($('#btnAgain')) $('#btnAgain').addEventListener('click', () => startLearnReview(MS.wrongList(lv).filter(r => r.k === 'l'), lv));
+  if ($('#btnUp')) $('#btnUp').addEventListener('click', () => startLearnReview(MS.wrongList(lv + 1).filter(r => r.k === 'l'), lv + 1));
+}
+
+/* ============ 最近记录 ============ */
+function renderHist() {
+  const rows = MS.histList(40);
+  if (!rows.length) {
+    $('#pane').innerHTML = '<div class="empty">还没有记录。<br>去<a href="vertical.html">竖式闯关</a>或<a href="learn/">知识点讲解</a>做几道题。</div>';
+    return;
+  }
+  $('#pane').innerHTML = '<div class="hlist">' + rows.map(r => {
+    const rate = pct(r.ok, r.n);
+    return '<div class="hrow">' +
+      '<i class="dot' + (r.k === 'learn' ? ' l' : '') + '"></i>' +
+      '<span class="s">' + esc(r.s || (r.k === 'calc' ? '计算' : '知识点')) + '</span>' +
+      '<span class="n">' + r.n + ' 题 · ' + rate + '%</span>' +
+      '<span class="t">' + ago(r.t) + '</span>' +
+      '</div>';
+  }).join('') + '</div>';
+}
+
+/* ============ 页签 ============ */
+const TABS = { calc: renderCalc, learn: renderLearn, wrong: renderWrong, hist: renderHist };
+
+function show(t) {
+  quiz = null;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  (TABS[t] || renderCalc)();
+}
+
+document.querySelectorAll('.tab').forEach(b => {
+  b.addEventListener('click', () => show(b.dataset.t));
+});
+
+/* ============ 顶部计数 ============ */
+function refreshTabs() {
+  const s = MS.summary();
+  $('#tabCalcN').textContent = s.calc.n || '';
+  $('#tabLearnN').textContent = s.learn.n || '';
+  $('#tabWrongN').textContent = s.wrongPending || '';
+}
+
+/* ============ 导出 / 清空 ============ */
+$('#btnExport').addEventListener('click', () => {
+  const data = JSON.stringify(MS.all(), null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'math-stats-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+});
+
+$('#btnResetAll').addEventListener('click', () => {
+  if (!confirm('清空全部统计和错题本？这一步不能撤销。')) return;
+  MS.reset();
+  refreshAll();
+});
+
+/* ============ 启动 ============ */
+function refreshAll() {
+  renderOverview();
+  renderTrend();
+  refreshTabs();
+  const on = document.querySelector('.tab.on');
+  show(on ? on.dataset.t : 'calc');
+}
+
+/* 从错题练习跳回 #wrong 时，自动落到最早还有题的那一阶 */
+function jumpToWrong() {
+  const w = MS.summary().wrong;
+  for (let i = 1; i <= 6; i++) { if (w[i]) { curLv = i; break; } }
+  show('wrong');
+}
+
+refreshAll();
+if (location.hash === '#wrong') jumpToWrong();
+window.addEventListener('hashchange', () => { if (location.hash === '#wrong') jumpToWrong(); });
+</script>
+</body>
+</html>

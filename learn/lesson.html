@@ -129,6 +129,7 @@ a{color:var(--pri);text-decoration:none}
   <div class="footnote">讲解语音由昕哥音色生成 · 进度只保存在本机浏览器</div>
 </div>
 
+<script src="../js/store.js"></script>
 <script src="data/outline.js"></script>
 <script src="data/lessons/ids.js"></script>
 <script src="js/scenes.js"></script>
@@ -260,10 +261,21 @@ function pick(i, btn) {
   if (answered) return;
   answered = true;
   const q = L.quiz[qi];
+  const ok = (i === q.k);
+  /* 记进学习统计与错题本：错题带上原题快照，统计页能直接重做 */
+  try {
+    MS.record({
+      kind: 'learn', ok: ok,
+      scope: { id: id, name: L.unit, g: L.grade, term: L.term },
+      snap: { qi: qi, q: q.q, a: q.a, k: q.k, why: q.why },
+      title: q.q,
+      sub: L.unit
+    });
+  } catch (e) {}
   const opts = document.querySelectorAll('.opt');
   opts.forEach(o => { o.disabled = true; });
   opts[q.k].classList.add('right');
-  if (i === q.k) right++;
+  if (ok) right++;
   else btn.classList.add('wrong');
   const why = $('#why');
   why.innerHTML = '<b>' + (i === q.k ? '对了。' : '再看一下。') + '</b>' + q.why;
@@ -277,6 +289,7 @@ function finish() {
   p.done = right >= 8;
   saveProg();
   const pass = right >= 8;
+  try { MS.unitBest(id, right, L.quiz.length, pass); } catch (e) {}
   const wrong = L.quiz.length - right;
   $('#quizBody').innerHTML =
     '<div class="result">' +
@@ -290,6 +303,7 @@ function finish() {
     '<div style="display:flex;gap:10px;justify-content:center;margin-top:18px">' +
     '<button class="btn ghost" id="btnRetry">再做一遍</button>' +
     '<button class="btn ghost" id="btnBack2">回到讲解</button>' +
+    '<a class="btn ghost" href="../stats.html#wrong">看错题本</a>' +
     '<a class="btn pri" href="index.html">下一个单元</a>' +
     '</div></div>';
   $('#btnRetry').addEventListener('click', startQuiz);

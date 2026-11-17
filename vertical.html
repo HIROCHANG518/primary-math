@@ -28,6 +28,9 @@ body{background:var(--bg);color:var(--ink);line-height:1.55;
 .tarrow{color:#9aa5bb;font-size:9px;transition:transform .2s;flex:0 0 auto}
 .tstage.open .tarrow{transform:rotate(180deg)}
 .tprog{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.tstat{flex:0 0 auto;font-size:11.5px;font-weight:800;color:#68738c;border:1px solid var(--line);background:#fff;
+  border-radius:9px;padding:5px 10px;text-decoration:none}
+.tstat:hover{border-color:#c2cce8;color:var(--pri)}
 
 /* 折叠面板 */
 .panel{display:none;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin:0 0 12px;box-shadow:0 14px 30px -22px rgba(20,30,60,.5)}
@@ -267,6 +270,25 @@ select:focus{border-color:var(--pri)}
   .stage{min-height:220px}
   .lv .s{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
+/* 错题练习模式：只留题目与判题 */
+body.review .tprog{display:none}
+body.review .panel{display:none}
+body.review .tstat{display:none}
+body.review #btnNext{display:none}
+body.review .tstage{cursor:default}
+body.review .tstage .tarrow{display:none}
+.rvhead{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:2px 0 8px}
+.rvbar{flex:1;height:6px;border-radius:3px;background:#e3e8f2;overflow:hidden}
+.rvbar i{display:block;height:100%;background:var(--pri);border-radius:3px;transition:width .3s}
+.rvdone{padding:26px 12px 12px;text-align:center}
+.rvdone h3{margin:0 0 10px;font-size:21px;letter-spacing:-.01em}
+.rvdone .big{font-size:40px;font-weight:800;line-height:1.05;color:var(--pri);margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.rvdone .sub{color:var(--muted);font-size:13px;margin:0 0 6px}
+.rvdone .rows{display:flex;gap:10px;justify-content:center;margin:14px 0 4px;flex-wrap:wrap}
+.rvdone .rows div{background:#f6f8fd;border:1px solid var(--line);border-radius:11px;padding:8px 14px;min-width:96px}
+.rvdone .rows b{display:block;font-size:19px}
+.rvdone .rows span{font-size:11px;color:var(--muted)}
+.rvdone .acts{display:flex;gap:9px;justify-content:center;margin-top:18px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -282,6 +304,7 @@ select:focus{border-color:var(--pri)}
       <div class="dots" id="dots"></div>
       <span class="cnt" id="cnt">0/10</span>
     </div>
+    <a class="tstat" href="stats.html" title="学习统计与错题本">统计</a>
   </div>
 
   <div class="panel" id="panel">
@@ -314,6 +337,7 @@ select:focus{border-color:var(--pri)}
     <div class="pblock pfoot">
       <button class="reset" id="btnUnlockAll">解锁全部关卡（家长）</button>
       <button class="reset" id="btnReset">清空进度</button>
+      <a href="stats.html">学习统计</a>
       <a href="index.html">知识纲要</a>
     </div>
   </div>
@@ -353,7 +377,13 @@ select:focus{border-color:var(--pri)}
 
 <div class="toast" id="toast"><b id="toastT"></b><span id="toastS"></span></div>
 
+<script src="js/store.js"></script>
 <script>
+/* 统计模块拿不到时（比如缓存里只有旧版）也不影响做题 */
+const MS = window.MS || {
+  record(){}, review(){ return null; }, stagePass(){}, summary(){ return null; },
+  wrongList(){ return []; }, wrongOf(){ return null; }
+};
 /* =========================================================
    1. 工具
    ========================================================= */
@@ -1011,6 +1041,7 @@ const HINT = {
 
 /* 顶部一行 + 折叠面板 */
 function renderPath(){
+  if (reviewLv) { renderReviewHead(); return; }
   const st = curStage();
   $('#tbGrade').textContent = st.gName;
   $('#tbStage').textContent = st.label;
@@ -1469,14 +1500,31 @@ function resetInputs(){
 /* =========================================================
    8. 判题 · 连对 · 阶梯
    ========================================================= */
+/* 记一道题进统计与错题本；复习模式的升阶另由 MS.review 处理 */
+function logAnswer(ok){
+  if (reviewLv) return;
+  const st = curStage(), q = state.q;
+  MS.record({
+    kind: 'calc', ok: ok,
+    scope: { idx: prog.i, g: st.gi + 1, gn: st.gName, label: st.label },
+    snap: { expr: q.expr, answer: q.answer, cols: q.cols, dotCol: q.dotCol,
+            rows: q.rows, inputs: q.inputs, carries: q.carries },
+    title: q.expr,
+    sub: st.gName + ' · ' + st.label
+  });
+}
+
 function onRight(){
   state.answered = true;
+  if (reviewLv) { finishReviewItem(true); return; }
+  logAnswer(true);
   const st = curStage();
   prog.streak++;
 
   if(prog.streak >= GOAL){
     if(prog.i < STAGES.length-1){
       prog.i++; prog.max = Math.max(prog.max, prog.i); prog.streak = 0;
+      MS.stagePass(prog.i - 1);
       const nx = curStage();
       state.gtab = nx.gi;
       saveProg(); renderPath();
@@ -1488,6 +1536,7 @@ function onRight(){
       autoTimer = setTimeout(newQuestion, 2400);
     } else {
       prog.streak = 0;
+      MS.stagePass(prog.i);
       saveProg(); renderPath();
       $('#verdict').textContent = '连对 10 题 · 一到六年级的计算全部闯完了！';
       $('#verdict').className = 'verdict good';
@@ -1507,6 +1556,8 @@ function onRight(){
 
 function onWrong(wrongD, wrongC){
   state.answered = true;
+  if (reviewLv) { finishReviewItem(false); return; }
+  logAnswer(false);
   const prev = prog.streak;
   prog.streak = 0;
   saveProg(); renderPath();
@@ -1745,6 +1796,7 @@ function newQuestion(){
   clearTimeout(autoTimer);
   cancelSpeak();
   playToken++;
+  if (reviewLv) { nextReview(); return; }
   const st = curStage();
   state.q = st.gen();
   state.playing = false;
@@ -1806,8 +1858,163 @@ $('#btnReset').addEventListener('click', ()=>{
   toast('进度已清空', '回到一年级第 1 关');
 });
 
-renderPath();
-newQuestion();
+/* =========================================================
+   10. 错题练习（vertical.html?review=1..6）
+   从错题本取某一阶的计算题逐题重做，答对升一阶、答错回一阶。
+   ========================================================= */
+const reviewLv = (() => {
+  const v = Number(new URLSearchParams(location.search).get('review'));
+  return (v >= 1 && v <= 6) ? v : 0;
+})();
+let rv = null;
+
+function renderReviewHead(){
+  const total = rv ? rv.list.length : 0;
+  const at = rv ? Math.min(rv.i + 1, total) : 0;
+  $('#tbGrade').textContent = '错题练习';
+  $('#tbStage').textContent = '第 ' + reviewLv + ' 阶 · 计算';
+  $('#tbPos').textContent = total ? at + '/' + total : '—';
+}
+
+/* 错题只存了排版所需的数据，讲解步骤不复存，所以复习时不提供逐步演示 */
+function hydrateQ(s){
+  return {
+    expr: s.expr || '?',
+    cols: s.cols || 1,
+    dotCol: (typeof s.dotCol === 'number') ? s.dotCol : -1,
+    rows: s.rows || [],
+    inputs: s.inputs || [],
+    carries: s.carries || [],
+    steps: [],
+    answer: s.answer || ''
+  };
+}
+
+function startReview(){
+  document.body.classList.add('review');
+  const list = MS.wrongList(reviewLv).filter(r => r.k === 'c' && r.snap && r.snap.rows);
+  rv = { list: list, i: 0, ok: 0, bad: 0 };
+  renderPath();
+  if (!list.length) { showReviewDone(); return; }
+  nextReview();
+}
+
+function nextReview(){
+  if (!rv || rv.i >= rv.list.length) { showReviewDone(); return; }
+  const rec = rv.list[rv.i];
+  const q = hydrateQ(rec.snap);
+
+  state.q = q;
+  state.playing = false;
+  state.answered = false;
+
+  $('#qtag').textContent = '第 ' + (rv.i + 1) + ' / ' + rv.list.length +
+    ' 题 · 之前错过 ' + rec.n + ' 次';
+  $('#expr').textContent = q.expr;
+  $('#verdict').textContent = '';
+  $('#verdict').className = 'verdict';
+  $('#stage').classList.remove('bubble-on');
+  $('#calc').classList.remove('on');
+  $('#stageHint').textContent = '把每一位算出来，进位或退位别忘了在上方小圆点里标一下。';
+  $('#btnPlay').disabled = true;
+  $('#btnCheck').disabled = false;
+  $('#btnNext').disabled = false;
+
+  renderStage();
+  $('#stepList').innerHTML = '';
+  hideSteps();
+  resetInputs();
+  updateReviewBar();
+  renderPath();
+}
+
+function updateReviewBar(){
+  let bar = $('#rvhead');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'rvhead';
+    bar.className = 'rvhead';
+    bar.innerHTML = '<div class="rvbar"><i></i></div><span></span>';
+    const head = document.querySelector('.bhead');
+    if (head && head.parentNode) head.parentNode.insertBefore(bar, head.nextSibling);
+  }
+  const total = rv.list.length || 1;
+  const doneN = rv.ok + rv.bad;
+  bar.querySelector('i').style.width = Math.round(doneN / total * 100) + '%';
+  bar.querySelector('span').textContent = '对 ' + rv.ok + ' · 错 ' + rv.bad +
+    ' · 剩 ' + Math.max(0, rv.list.length - doneN);
+}
+
+function finishReviewItem(ok){
+  const rec = rv.list[rv.i];
+  const after = MS.review(rec.id, ok);
+  if (ok) rv.ok++; else rv.bad++;
+
+  if (ok) {
+    let tip = '记下了';
+    if (after && after.grad) tip = '六阶都过了，这道题出本';
+    else if (after) tip = '升到第 ' + Math.min(after.lv, 6) + ' 阶';
+    $('#verdict').textContent = '正确 · ' + tip;
+    $('#verdict').className = 'verdict good';
+  } else {
+    $('#verdict').textContent = '又错了 · 回到第 1 阶 · 正确答案 ' + state.q.answer;
+    $('#verdict').className = 'verdict err';
+  }
+
+  rv.i++;
+  updateReviewBar();
+  renderPath();
+  autoTimer = setTimeout(nextReview, ok ? 1400 : 2800);
+}
+
+function showReviewDone(){
+  const total = rv ? rv.list.length : 0;
+  const ok = rv ? rv.ok : 0, bad = rv ? rv.bad : 0;
+  const rate = total ? Math.round(ok / total * 100) : 0;
+  const cur = MS.wrongList(reviewLv).filter(r => r.k === 'c').length;
+  const nxt = reviewLv < 6 ? MS.wrongList(reviewLv + 1).filter(r => r.k === 'c').length : 0;
+
+  $('#qtag').textContent = '错题练习 · 第 ' + reviewLv + ' 阶';
+  $('#expr').textContent = '';
+  $('#verdict').textContent = '';
+  $('#verdict').className = 'verdict';
+  $('#calc').innerHTML = '';
+  $('#stepList').innerHTML = '';
+  const bar = $('#rvhead'); if (bar) bar.remove();
+
+  const head = total
+    ? '<h3>第 ' + reviewLv + ' 阶练习完成</h3>' +
+      '<div class="big">' + rate + '%</div>' +
+      '<p class="sub">做对 ' + ok + ' 题，做错 ' + bad + ' 题</p>'
+    : '<h3>第 ' + reviewLv + ' 阶还没有错题</h3>' +
+      '<p class="sub">先做几道题，做错的会自动进错题本，再回来练。</p>';
+
+  const rows = total
+    ? '<div class="rows">' +
+        '<div><b>' + ok + '</b><span>升到第 ' + Math.min(reviewLv + 1, 6) + ' 阶' +
+          (reviewLv === 6 && ok ? '（出本）' : '') + '</span></div>' +
+        '<div><b>' + bad + '</b><span>回到第 1 阶</span></div>' +
+        '<div><b>' + cur + '</b><span>第 ' + reviewLv + ' 阶还剩</span></div>' +
+      '</div>'
+    : '';
+
+  const acts = [];
+  if (cur > 0 && total) acts.push('<a class="btn" href="vertical.html?review=' + reviewLv + '">再练第 ' + reviewLv + ' 阶（' + cur + '）</a>');
+  if (nxt > 0) acts.push('<a class="btn" href="vertical.html?review=' + (reviewLv + 1) + '">进入第 ' + (reviewLv + 1) + ' 阶（' + nxt + '）</a>');
+  acts.push('<a class="btn ghost" href="stats.html#wrong">回到学习统计</a>');
+
+  $('#stage').innerHTML = '<div class="rvdone">' + head + rows +
+    '<div class="acts">' + acts.join('') + '</div></div>';
+  $('#stageHint').textContent = '';
+  $('#btnCheck').disabled = true;
+  $('#btnNext').disabled = true;
+  $('#btnPlay').disabled = true;
+  renderPath();
+}
+
+/* 启动：错题练习模式走复习流程，否则进正常闯关 */
+if (reviewLv) startReview();
+else { renderPath(); newQuestion(); }
 </script>
 </body>
 </html>
