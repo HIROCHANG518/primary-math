@@ -1203,10 +1203,98 @@ if(SPEECH_OK){
   catch(e){ speechSynthesis.onvoiceschanged = refresh; }
 }
 
+/* ---------- 6.5a 讲解音频：服务器合成（昕哥音色 → 云希兜底），页面只取 mp3 ---------- */
+const TTS_SILENT = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYyLjEyLjEwMQAAAAAAAAAAAAAA//M0xAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVV//M0xDsAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//M0xHYAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//M0xLEAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//M0xMQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+const TTS_READY = new Map();     /* 文本 → blob URL */
+const TTS_PEND = new Map();      /* 文本 → 预取 Promise */
+const TTS_DEAD = new Set();      /* 合成不出来的句子，不再重试 */
+let ttsAudio = null, ttsUnlocked = false;
+
+function ttsEl(){
+  if(!ttsAudio){
+    ttsAudio = new Audio();
+    ttsAudio.preload = 'auto';
+    ttsAudio.setAttribute('playsinline','');
+    ttsAudio.setAttribute('webkit-playsinline','');
+  }
+  return ttsAudio;
+}
+
+function ttsUrl(t){ return '/sx2-tts?t=' + encodeURIComponent(t); }
+
+/* 题目一出现就把这道题的几句并行合成好，孩子点「讲解」时直接播 */
+function prefetchTts(list){
+  if(!voiceOn) return;
+  list.forEach(raw=>{
+    const t = toSpeech(raw);
+    if(!t || TTS_READY.has(t) || TTS_PEND.has(t) || TTS_DEAD.has(t)) return;
+    const p = fetch(ttsUrl(t), { cache:'force-cache' })
+      .then(r=>{ if(!r.ok) throw new Error('http ' + r.status); return r.blob(); })
+      .then(b=>{ TTS_READY.set(t, URL.createObjectURL(b)); })
+      .catch(()=>{ TTS_DEAD.add(t); })
+      .then(()=>{ TTS_PEND.delete(t); });
+    TTS_PEND.set(t, p);
+  });
+}
+
+/* iPad 只允许「手指点过之后」出声：第一次触摸时用一个 60ms 静音把同一个 <audio> 解锁 */
+function unlockTts(){
+  if(ttsUnlocked) return;
+  ttsUnlocked = true;
+  const a = ttsEl();
+  if(a.currentSrc || a.src) return;
+  try{
+    a.src = TTS_SILENT;
+    const p = a.play();
+    if(p && p.then) p.then(()=>{ try{ a.pause(); }catch(e){} }).catch(()=>{});
+  }catch(e){}
+}
+window.addEventListener('pointerdown', unlockTts, { once:true, capture:true });
+window.addEventListener('touchstart', unlockTts, { once:true, capture:true });
+
+/* 播一句已合成好的音频；没有缓存返回 null，交给调用方回落系统 TTS */
+function playTts(t){
+  const src = TTS_READY.get(t);
+  if(!src) return null;
+  return new Promise(res=>{
+    const a = ttsEl();
+    let done = false;
+    const fin = ()=>{
+      if(done) return; done = true;
+      clearTimeout(to);
+      a.removeEventListener('ended', fin);
+      a.removeEventListener('error', fin);
+      res(true);
+    };
+    /* 个别设备 ended 不触发：按 25s 兜底，动画不会被卡死 */
+    const to = setTimeout(fin, 25000);
+    a.addEventListener('ended', fin);
+    a.addEventListener('error', fin);
+    try{
+      a.src = src;
+      a.currentTime = 0;
+      a.playbackRate = 1;
+      const p = a.play();
+      if(p && p.catch) p.catch(()=>fin());
+    }catch(e){ fin(); }
+  });
+}
+
 function cancelSpeak(){
-  if(!SPEECH_OK) return;
   speakingNow = false;
+  if(ttsAudio){
+    try{ ttsAudio.pause(); ttsAudio.removeAttribute('src'); ttsAudio.load(); }catch(e){}
+  }
+  if(!SPEECH_OK) return;
   try{ if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel(); }catch(e){}
+}
+
+/* 本题要念的句子：开场 + 每一步 + 答案 */
+function prefetchCurrent(){
+  if(!state.q || !state.q.steps) return;
+  prefetchTts(['我们来看这道题。']
+    .concat(state.q.steps.map(s=>s.text))
+    .concat(['答案是 ' + state.q.answer + '。']));
 }
 
 /* 把 ÷ × + = 换成人话，免得 TTS 念成「除以号」这类怪音 */
@@ -1218,11 +1306,9 @@ function toSpeech(t){
     .replace(/…/g,'').replace(/[ \t]+/g,' ').trim();
 }
 
-/* 念一句；返回 Promise（念完/失败/超时都会 resolve），语音关闭时返回 null */
-function say(text){
-  if(!SPEECH_OK || !voiceOn) return null;
-  const t = toSpeech(text);
-  if(!t) return null;
+/* 系统 TTS 兜底（服务器音频拿不到时才用） */
+function saySystem(t){
+  if(!SPEECH_OK) return Promise.resolve();
   return new Promise(res=>{
     let done = false;
     const fin = ()=>{ if(done) return; done = true; speakingNow = false; res(); };
@@ -1241,13 +1327,40 @@ function say(text){
   });
 }
 
+/* 念一句：优先播昕哥音色的成品音频，没合成好就等一下，最后才回落系统 TTS */
+async function say(text){
+  if(!voiceOn) return;
+  const t = toSpeech(text);
+  if(!t) return;
+
+  const direct = playTts(t);
+  if(direct){
+    speakingNow = true;
+    try{ await direct; } finally { speakingNow = false; }
+    return;
+  }
+  /* 预取还没回来：最多等 1.6s（通常早就在了），避免立刻掉到系统发音 */
+  const pend = TTS_PEND.get(t);
+  if(pend){
+    await Promise.race([ pend, wait(1600) ]);
+    const second = playTts(t);
+    if(second){
+      speakingNow = true;
+      try{ await second; } finally { speakingNow = false; }
+      return;
+    }
+  }
+  await saySystem(t);
+}
+
 $('#btnVoice').classList.toggle('on', voiceOn);
 $('#btnVoice').addEventListener('click', ()=>{
   voiceOn = !voiceOn;
   $('#btnVoice').classList.toggle('on', voiceOn);
   try{ localStorage.setItem(VKEY, voiceOn ? '1' : '0'); }catch(e){}
   if(!voiceOn) cancelSpeak();
-  $('#vsub').textContent = voiceOn ? '每一步用中文念一遍（用 iPad 自带发音）' : '已关闭，只播动画不发音';
+  if(voiceOn) prefetchCurrent();       /* 刚打开语音：把本题的句子补合成 */
+  $('#vsub').textContent = voiceOn ? '每一步用昕哥音色念一遍（云希兜底）' : '已关闭，只播动画不发音';
 });
 
 /* =========================================================
@@ -1648,6 +1761,8 @@ function newQuestion(){
   renderSteps();
   hideSteps();
   resetInputs();
+  /* 题目一出来就并行合成这道题的讲解语音，点「讲解」时基本已就绪 */
+  prefetchCurrent();
 }
 
 $('#pad').innerHTML = ['1','2','3','4','5','6','7','8','9','0'].map(d=>

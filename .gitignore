@@ -1,1 +1,5 @@
 .DS_Store
+
+# 配音母版与工作目录（体积大，只留试听 mp3）
+voice-samples/work/
+*.wav
