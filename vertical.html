@@ -213,6 +213,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items
 .steps li.on::before{background:var(--pri);color:#fff}
 .steps li.done::before{content:"✓";background:#dff3e9;color:var(--ok)}
 .steps li.idle{opacity:.62}
+/* 没点「讲解」/「检查」前先把步骤藏起来，免得孩子直接抄答案（位置照占，布局不跳） */
+.steps.secret li{visibility:hidden}
+.steps-tip{font-size:11.5px;color:var(--muted);margin:-4px 0 8px;line-height:1.45}
 
 .plist{display:flex;flex-direction:column;gap:8px}
 .prow{display:flex;align-items:center;gap:8px;font-size:12px;color:#5b6580}
@@ -225,9 +228,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items
 .reset{background:none;border:0;color:#a3acbf;font-size:11px;font-family:inherit;cursor:pointer;padding:0;text-decoration:underline}
 .reset:hover{color:var(--bad)}
 
-.voice{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.voice label{font-size:12px;color:var(--muted);white-space:nowrap}
-.voice select{flex:1 1 200px;min-width:0}
+.vrow{display:flex;align-items:flex-start;gap:11px;margin-top:10px}
+.vtxt{font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.25}
+.vsub{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}
 .sw{width:38px;height:22px;border-radius:999px;background:#d7ddec;border:0;position:relative;cursor:pointer;transition:.2s;flex:0 0 auto}
 .sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .sw.on{background:var(--pri)}
@@ -298,7 +301,14 @@ select:focus{border-color:var(--pri)}
 
     <div class="pblock">
       <span class="plabel">讲解方式</span>
-      <p class="hint" style="margin:0">点题目右下角的「讲解」，会在竖式上<b>逐步动画演示</b>：正在算的那一列会亮起，下面浮出这一位的算式，进位自动落到上方，结果一位一位填进去。没有语音，看动画就够。</p>
+      <p class="hint" style="margin:0">点题目右下角的「讲解」，竖式会<b>一边动画演示一边念出来</b>：正在算的那一列亮起，下面浮出这一位的算式，同一个句话从喇叭里念一遍，进位自动落到上方，结果一位一位填进去。念完一句才走下一步。</p>
+      <div class="vrow">
+        <button class="sw on" id="btnVoice" aria-label="语音讲解开关"></button>
+        <div>
+          <div class="vtxt">语音讲解</div>
+          <div class="vsub" id="vsub">每一步用中文念一遍（用 iPad 自带发音）</div>
+        </div>
+      </div>
     </div>
 
     <div class="pblock pfoot">
@@ -332,7 +342,8 @@ select:focus{border-color:var(--pri)}
     <aside class="side">
       <div class="card">
         <h3>讲解步骤</h3>
-        <ol class="steps" id="stepList">
+        <p class="steps-tip" id="stepsTip">先自己做做看；点「讲解」或「检查」后这里会列出每一步。</p>
+        <ol class="steps secret" id="stepList">
           <li class="idle">点「讲解」逐步演示，也可以自己先动手做。</li>
         </ol>
       </div>
@@ -444,13 +455,13 @@ function buildAddSub(o){
       const x=dv(sA,p), y=dv(sB,p);
       if(sA[p]===' ' && sB[p]===' '){
         if(carry>0 && sC[p]!==' '){
-          steps.push({hi:[col], ex:'进位 '+carry+'，直接落下', text: place(k,d)+'：只剩进上来的 '+carry+'，直接写下来。', set:[{id:'r'+p, v:String(carry)}]});
+          steps.push({hi:[col], ex:'进位 '+carry+'，直接落下', text: (N>1?place(k,d)+'：':'')+'只剩进上来的 '+carry+'，直接写下来。', set:[{id:'r'+p, v:String(carry)}]});
         }
         carry=0;
         continue;
       }
       const sum=x+y+carry;
-      const base = place(k,d)+'：'+x+' 加 '+y+(carry?'，再加进位的 '+carry:'')+' 等于 '+sum+'。';
+      const base = (N>1?place(k,d)+'：':'')+x+' 加 '+y+(carry?'，再加进位的 '+carry:'')+' 等于 '+sum+'。';
       if(sum>=10){
         const out=Math.floor(sum/10), ccol=colOf(p-1);
         const cid='c'+ccol;
@@ -480,9 +491,9 @@ function buildAddSub(o){
       if(took && x===0 && bor===1){
         txt = place(k,d)+'是 0，先向'+place(k+1,d)+'借 1 当 10，再借给'+place(k-1,d)+' 1，剩 9。9 减 '+y+' 等于 '+rd+'。';
       } else if(took){
-        txt = place(k,d)+'：'+x+(bor?' 被借走 1 剩 '+(x-1):'')+' 减 '+y+' 不够减，向'+place(k+1,d)+'借 1 当 10，'+cur+' 减 '+y+' 等于 '+rd+'。';
+        txt = (N>1?place(k,d)+'：':'')+x+(bor?' 被借走 1 剩 '+(x-1):'')+' 减 '+y+' 不够减，向'+place(k+1,d)+'借 1 当 10，'+cur+' 减 '+y+' 等于 '+rd+'。';
       } else {
-        txt = place(k,d)+'：'+x+(bor?' 被借走 1 剩 '+cur:'')+' 减 '+y+' 等于 '+rd+'。';
+        txt = (N>1?place(k,d)+'：':'')+x+(bor?' 被借走 1 剩 '+cur:'')+' 减 '+y+' 等于 '+rd+'。';
       }
       steps.push({hi:[col], ex:(d>0?place(k,d)+' ':'')+(took?'('+x+' + 10) − '+y+' = '+rd : cur+' − '+y+' = '+rd), text:txt,
         set:[{id:'r'+p, v:String(rd)}], carry: took?{id:cid, v:'-1', red:true}:null});
@@ -1137,6 +1148,15 @@ function renderSteps(){
   $('#stepList').innerHTML = state.q.steps.map((s,i)=>
     '<li class="idle" data-n="'+(i+1)+'">'+s.text+'</li>').join('');
 }
+/* 家长/孩子点了讲解或检查，才把步骤亮出来 */
+function revealSteps(){
+  $('#stepList').classList.remove('secret');
+  const tip = $('#stepsTip'); if(tip) tip.style.display = 'none';
+}
+function hideSteps(){
+  $('#stepList').classList.add('secret');
+  const tip = $('#stepsTip'); if(tip) tip.style.display = '';
+}
 function markStep(i){
   const lis = document.querySelectorAll('#stepList li');
   lis.forEach((li,k)=>{
@@ -1153,10 +1173,89 @@ function markAllDone(){
 }
 
 /* =========================================================
+   6.5 语音朗读（和动画同步，念完一句才走下一步）
+   ========================================================= */
+const SPEECH_OK = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+const VKEY = 'pm_voice_v1';
+let voiceOn = (()=>{ try{ const v=localStorage.getItem(VKEY); return v===null ? true : v==='1'; }catch(e){ return true; } })();
+let VOICE = null;
+let speakingNow = false;
+
+/* 挑一个中文声音：iPad 上是「婷婷」，Chrome 上是 Google 普通话 */
+function pickVoice(){
+  if(!SPEECH_OK) return null;
+  let vs = [];
+  try{ vs = speechSynthesis.getVoices() || []; }catch(e){ return null; }
+  if(!vs.length) return null;
+  const zh = vs.filter(v => /^zh/i.test(v.lang || ''));
+  if(!zh.length) return null;
+  const prefer = ['婷婷','Ting-Ting','Tingting','美佳','Mei-Jia','Yu-Shu','Sin-Ji','Li-Mu','Lilian','Han'];
+  for(const p of prefer){
+    const hit = zh.find(v => (v.name||'').includes(p));
+    if(hit) return hit;
+  }
+  return zh.find(v => /zh[-_]?(CN|Hans)/i.test(v.lang||'')) || zh[0];
+}
+if(SPEECH_OK){
+  VOICE = pickVoice();
+  const refresh = ()=>{ const v = pickVoice(); if(v) VOICE = v; };
+  try{ speechSynthesis.addEventListener('voiceschanged', refresh); }
+  catch(e){ speechSynthesis.onvoiceschanged = refresh; }
+}
+
+function cancelSpeak(){
+  if(!SPEECH_OK) return;
+  speakingNow = false;
+  try{ if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel(); }catch(e){}
+}
+
+/* 把 ÷ × + = 换成人话，免得 TTS 念成「除以号」这类怪音 */
+function toSpeech(t){
+  return String(t||'')
+    .replace(/÷/g,' 除以 ').replace(/×/g,' 乘 ')
+    .replace(/[−–—]/g,' 减 ').replace(/-/g,' 减 ')
+    .replace(/\+/g,' 加 ').replace(/=/g,' 等于 ')
+    .replace(/…/g,'').replace(/[ \t]+/g,' ').trim();
+}
+
+/* 念一句；返回 Promise（念完/失败/超时都会 resolve），语音关闭时返回 null */
+function say(text){
+  if(!SPEECH_OK || !voiceOn) return null;
+  const t = toSpeech(text);
+  if(!t) return null;
+  return new Promise(res=>{
+    let done = false;
+    const fin = ()=>{ if(done) return; done = true; speakingNow = false; res(); };
+    try{
+      if(speakingNow) cancelSpeak();      /* 真的还在念才打断，避免 Safari 连发取消变哑 */
+      const u = new SpeechSynthesisUtterance(t);
+      const v = VOICE || pickVoice();
+      if(v){ u.voice = v; u.lang = v.lang; } else { u.lang = 'zh-CN'; }
+      u.rate = 0.95; u.pitch = 1.04; u.volume = 1;
+      u.onend = fin; u.onerror = fin;
+      speakingNow = true;
+      speechSynthesis.speak(u);
+      /* 兜底：个别设备不触发 onend，按字数给个上限，避免动画卡住 */
+      setTimeout(fin, Math.min(12000, 1600 + t.length * 300));
+    }catch(e){ fin(); }
+  });
+}
+
+$('#btnVoice').classList.toggle('on', voiceOn);
+$('#btnVoice').addEventListener('click', ()=>{
+  voiceOn = !voiceOn;
+  $('#btnVoice').classList.toggle('on', voiceOn);
+  try{ localStorage.setItem(VKEY, voiceOn ? '1' : '0'); }catch(e){}
+  if(!voiceOn) cancelSpeak();
+  $('#vsub').textContent = voiceOn ? '每一步用中文念一遍（用 iPad 自带发音）' : '已关闭，只播动画不发音';
+});
+
+/* =========================================================
    7. 讲解播放
    ========================================================= */
 function endPlay(){
   state.playing = false;
+  cancelSpeak();
   $('#btnPlay').disabled = false;
   $('#stage').classList.remove('bubble-on');
   $('#calc').classList.remove('on');
@@ -1202,8 +1301,11 @@ async function play(){
   $('#verdict').className = 'verdict';
   resetInputs();
   renderSteps();
+  revealSteps();
   $('#stage').classList.add('bubble-on');
-  await wait(300);
+  /* 这一句必须在点击手势里同步发出去：iPad 只允许用户在点击后第一次出声 */
+  const intro = say('我们来看这道题。');
+  await Promise.all([ wait(300), intro || Promise.resolve() ]);
 
   const steps = state.q.steps;
   for(let i=0;i<steps.length;i++){
@@ -1212,17 +1314,19 @@ async function play(){
     markStep(i);
     highlight(st.hi);
     showCalc(st);
+    const sp = say(st.text);          /* 一边高亮一边念这一位 */
     await wait(430);
     if(my !== playToken){ endPlay(); return; }
 
     if(st.set) st.set.forEach(x=>setResult(x.id, x.v, true));
     if(st.carry) setCarry(st.carry.id, st.carry.v, st.carry.red);
-    await wait(830);
+    /* 数字落下 830ms，句子可能更长：两边都结束才进下一步 */
+    await Promise.all([ wait(830), sp || Promise.resolve() ]);
     if(my !== playToken){ endPlay(); return; }
 
     unhighlight();
     const last = i === steps.length-1;
-    if(!last) await wait(70);
+    if(!last) await wait(160);
   }
   if(my !== playToken){ endPlay(); return; }
 
@@ -1232,6 +1336,9 @@ async function play(){
   $('#calc').classList.remove('on');
   $('#verdict').textContent = '讲解完毕 · 答案是 ' + state.q.answer;
   $('#verdict').className = 'verdict good';
+  /* 最后一步的文案里没有报答案时补一句 */
+  const lastTxt = (state.q.steps[state.q.steps.length-1]||{}).text || '';
+  if(!/答案/.test(lastTxt)) say('答案是 ' + state.q.answer + '。');
   setTimeout(()=>{ if(my===playToken) $('#stage').classList.remove('bubble-on'); }, 700);
 }
 
@@ -1342,10 +1449,10 @@ function check(){
     return;
   }
 
+  revealSteps();
   if(wrongD + wrongC === 0) onRight();
   else onWrong(wrongD, wrongC);
 }
-
 /* =========================================================
    9. 交互
    ========================================================= */
@@ -1501,6 +1608,7 @@ $('#plans').addEventListener('click', e=>{
   state.design = p.dataset.d;
   playToken++;                       /* 切方案时中断正在播的讲解 */
   state.playing = false;
+  cancelSpeak();
   document.querySelectorAll('.plan').forEach(x=>x.classList.toggle('on', x===p));
   $('#pad').classList.toggle('show', state.design!=='dial');
   $('#stageHint').innerHTML = HINT[state.design] || HINT.dial;
@@ -1514,11 +1622,15 @@ $('#btnPlay').addEventListener('click', play);
 $('#btnCheck').addEventListener('click', check);
 $('#btnNext').addEventListener('click', ()=>{ clearTimeout(autoTimer); newQuestion(); });
 
+/* iPad 切到后台时把没念完的句子掐掉，回来不会突然冒出半句 */
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) cancelSpeak(); });
+
 /* =========================================================
    10. 启动
    ========================================================= */
 function newQuestion(){
   clearTimeout(autoTimer);
+  cancelSpeak();
   playToken++;
   const st = curStage();
   state.q = st.gen();
@@ -1534,6 +1646,7 @@ function newQuestion(){
   $('#calc').classList.remove('on');
   renderStage();
   renderSteps();
+  hideSteps();
   resetInputs();
 }
 
