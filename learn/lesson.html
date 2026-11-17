@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知识点讲解 · 小学数学</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#f1f4fa;--card:#fff;--ink:#151c2c;--muted:#6b7588;--line:#e3e8f2;
+  --pri:#4a63d8;--pri-soft:#eef1ff;--ok:#1f9c66;--bad:#dc4f4f;--warn:#e8961a;
+  --mono:"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);line-height:1.6;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:0 16px 40px}
+a{color:var(--pri);text-decoration:none}
+
+/* 顶栏 */
+.bar{display:flex;align-items:center;gap:10px;padding:12px 0 10px;position:sticky;top:0;
+  background:linear-gradient(var(--bg) 78%,rgba(241,244,250,0));z-index:20}
+.back{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;
+  display:flex;align-items:center;justify-content:center;color:#5b6a86;cursor:pointer;font-size:16px}
+.badge{font-size:11px;font-weight:800;color:var(--pri);background:var(--pri-soft);
+  border-radius:7px;padding:3px 8px;white-space:nowrap}
+.htitle{font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hsub{font-size:11px;color:var(--muted);white-space:nowrap}
+.spacer{flex:1}
+.iconbtn{border:1px solid var(--line);background:#fff;border-radius:10px;width:34px;height:34px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px}
+.iconbtn.on{background:var(--pri-soft);border-color:#c9d3f5;color:var(--pri)}
+
+/* 舞台 */
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;
+  box-shadow:0 18px 40px -30px rgba(20,30,60,.55);overflow:hidden}
+.stage{padding:8px 8px 0;background:linear-gradient(#fbfcff,#fff)}
+.scene-svg{width:100%;height:auto;display:block}
+.fx{opacity:0;animation:fxin .42s ease forwards}
+.fx.grow{transform-origin:bottom;animation:grow .55s cubic-bezier(.2,.9,.3,1) forwards}
+.fx.fade-out{animation:fadeout .8s ease forwards}
+.fx.slide-in{animation:slidein .5s ease forwards}
+@keyframes fxin{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes grow{from{opacity:0;transform:scaleY(.2)}to{opacity:1;transform:none}}
+@keyframes fadeout{0%{opacity:1}60%{opacity:1;transform:translateY(-6px)}100%{opacity:0;transform:translateY(-26px)}}
+@keyframes slidein{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+
+/* 字幕 */
+.sub{padding:14px 18px 0;font-size:16.5px;line-height:1.75;min-height:96px}
+.sub b{color:var(--pri)}
+.stepdots{display:flex;gap:6px;padding:0 18px 12px}
+.sd{height:4px;flex:1;border-radius:3px;background:var(--line)}
+.sd.on{background:var(--pri)}
+.sd.done{background:#b9c4ec}
+
+/* 控制条 */
+.ctrl{display:flex;gap:8px;padding:0 14px 14px;align-items:center}
+.btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 16px;
+  font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#3a465e}
+.btn:hover{border-color:#c2cce8}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.pri:hover{background:#3f56c4}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:#fff}
+.ctrl .grow{flex:1}
+
+/* 练习 */
+.quiz{padding:18px}
+.qhead{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:10px}
+.qhead .n{font-weight:800;color:var(--pri);font-family:var(--mono)}
+.qtext{font-size:19px;font-weight:700;line-height:1.65;margin:0 0 14px}
+.opts{display:grid;gap:9px}
+.opt{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);background:#fff;
+  border-radius:13px;padding:12px 14px;font-size:16px;cursor:pointer;font-family:inherit;text-align:left;
+  transition:.14s}
+.opt:hover{border-color:#c2cce8;background:#fbfcff}
+.opt .k{width:24px;height:24px;border-radius:8px;background:#f1f4fa;color:#68738c;font-size:12px;
+  font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.opt.right{border-color:var(--ok);background:#effaf4}
+.opt.right .k{background:var(--ok);color:#fff}
+.opt.wrong{border-color:var(--bad);background:#fdf0f0}
+.opt.wrong .k{background:var(--bad);color:#fff}
+.why{margin-top:12px;padding:11px 13px;border-radius:12px;background:#f7f9ff;border:1px solid #e4e9fb;
+  font-size:14px;line-height:1.7;color:#3d4a68;display:none}
+.why.show{display:block}
+.why b{color:var(--pri)}
+
+/* 结算 */
+.result{text-align:center;padding:26px 18px}
+.score{font-size:52px;font-weight:800;color:var(--pri);line-height:1}
+.score small{font-size:16px;color:var(--muted);font-weight:600}
+.verdict{margin:12px 0 6px;font-size:17px;font-weight:700}
+.tips{font-size:13.5px;color:var(--muted);line-height:1.8;text-align:left;max-width:520px;margin:14px auto 0;
+  background:#f8faff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.pill{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 9px;margin-left:6px}
+.pill.ok{background:#e7f7ef;color:var(--ok)}
+.pill.mid{background:#fff5e6;color:var(--warn)}
+.hide{display:none!important}
+.footnote{text-align:center;font-size:11.5px;color:#9aa5bb;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <a class="back" href="index.html" title="返回知识点地图">←</a>
+    <div>
+      <div class="htitle" id="hTitle">知识点讲解</div>
+      <div class="hsub" id="hSub"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn on" id="btnVoice" title="语音开关">🔊</button>
+  </div>
+
+  <div class="card" id="lessonCard">
+    <div class="stage" id="stage"></div>
+    <div class="sub" id="subtitle"></div>
+    <div class="stepdots" id="stepDots"></div>
+    <div class="ctrl">
+      <button class="btn ghost" id="btnPrev">上一步</button>
+      <button class="btn ghost" id="btnReplay">重听</button>
+      <div class="grow"></div>
+      <button class="btn pri" id="btnNext">下一步</button>
+    </div>
+  </div>
+
+  <div class="card hide" id="quizCard" style="margin-top:14px">
+    <div class="quiz" id="quizBody"></div>
+  </div>
+
+  <div class="footnote">讲解语音由昕哥音色生成 · 进度只保存在本机浏览器</div>
+</div>
+
+<script src="data/outline.js"></script>
+<script src="data/lessons.js"></script>
+<script src="js/scenes.js"></script>
+<script>
+/* ============ 基础 ============ */
+const $ = s => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const id = params.get('id') || Object.keys(LESSONS)[0];
+const L = LESSONS[id];
+const PROG_KEY = 'learn_prog_v1';
+const prog = (() => { try { return JSON.parse(localStorage.getItem(PROG_KEY) || '{}'); } catch (e) { return {}; } })();
+const saveProg = () => { try { localStorage.setItem(PROG_KEY, JSON.stringify(prog)); } catch (e) {} };
+
+if (!L) {
+  document.body.innerHTML = '<div class="wrap" style="padding:60px 16px;text-align:center">' +
+    '<p style="font-size:18px;font-weight:700">这个单元还没有做讲解</p>' +
+    '<p style="color:#6b7588;font-size:14px">回到地图看看已经上线的单元。</p>' +
+    '<p><a href="index.html">← 返回知识点地图</a></p></div>';
+}
+
+/* ============ 语音 ============ */
+let voiceOn = localStorage.getItem('learn_voice') !== '0';
+let audio = null, speaking = false;
+const audioCache = new Map();
+
+function el() {
+  if (!audio) { audio = new Audio(); audio.preload = 'auto'; audio.setAttribute('playsinline', ''); }
+  return audio;
+}
+function staticUrl(i) { return 'audio/' + id + '-' + i + '.mp3'; }
+function liveUrl(t) { return '/sx2-tts?t=' + encodeURIComponent(t); }
+
+function loadStep(i) {
+  if (audioCache.has(i)) return Promise.resolve(audioCache.get(i));
+  const p = fetch(staticUrl(i), { cache: 'force-cache' })
+    .then(r => { if (!r.ok) throw new Error('no static'); return r.blob(); })
+    .then(b => URL.createObjectURL(b))
+    .catch(() => fetch(liveUrl(L.steps[i].say))
+      .then(r => { if (!r.ok) throw new Error('no live'); return r.blob(); })
+      .then(b => URL.createObjectURL(b)));
+  audioCache.set(i, p);
+  return p;
+}
+
+function stopVoice() {
+  speaking = false;
+  if (audio) { try { audio.pause(); } catch (e) {} }
+}
+
+async function speak(i) {
+  if (!voiceOn) return;
+  stopVoice();
+  let src;
+  try { src = await loadStep(i); } catch (e) { return; }
+  const a = el();
+  a.src = src;
+  speaking = true;
+  try {
+    await a.play();
+    a.onended = () => { speaking = false; };
+  } catch (e) { speaking = false; }
+}
+
+/* ============ 步骤播放 ============ */
+let cur = 0;
+const total = L ? L.steps.length : 0;
+
+function renderDots() {
+  $('#stepDots').innerHTML = L.steps.map((_, i) =>
+    '<div class="sd ' + (i === cur ? 'on' : (i < cur ? 'done' : '')) + '"></div>').join('');
+}
+
+function show(i, opts) {
+  opts = opts || {};
+  cur = Math.max(0, Math.min(total - 1, i));
+  const st = L.steps[cur];
+  const stage = $('#stage');
+  stage.style.opacity = 0;
+  setTimeout(() => {
+    stage.innerHTML = SCENES.render(st.scene);
+    stage.style.transition = 'opacity .22s';
+    stage.style.opacity = 1;
+  }, 60);
+  $('#subtitle').innerHTML = st.say;
+  renderDots();
+  $('#btnPrev').disabled = cur === 0;
+  $('#btnNext').textContent = cur === total - 1 ? '开始练习' : '下一步';
+  if (!opts.silent) speak(cur);
+  if (voiceOn) { loadStep(cur + 1).catch(() => {}); }   // 预取下一句
+  const p = prog[id] || (prog[id] = {});
+  p.step = Math.max(p.step || 0, cur);
+  saveProg();
+}
+
+/* ============ 练习 ============ */
+let qi = 0, right = 0, answered = false;
+
+function startQuiz() {
+  $('#lessonCard').classList.add('hide');
+  $('#quizCard').classList.remove('hide');
+  qi = 0; right = 0;
+  renderQuiz();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderQuiz() {
+  answered = false;
+  const q = L.quiz[qi];
+  const body = $('#quizBody');
+  body.innerHTML =
+    '<div class="qhead"><span class="n">第 ' + (qi + 1) + ' / ' + L.quiz.length + ' 题</span>' +
+    '<span>答对 ' + right + ' 题</span></div>' +
+    '<p class="qtext">' + q.q + '</p>' +
+    '<div class="opts">' + q.a.map((t, i) =>
+      '<button class="opt" data-i="' + i + '"><span class="k">' + 'ABC'[i] + '</span><span>' + t + '</span></button>').join('') + '</div>' +
+    '<div class="why" id="why"></div>' +
+    '<div style="display:flex;justify-content:flex-end;margin-top:14px">' +
+    '<button class="btn pri hide" id="btnQNext">' + (qi === L.quiz.length - 1 ? '看看结果' : '下一题') + '</button></div>';
+
+  body.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => pick(Number(b.dataset.i), b)));
+  const n = $('#btnQNext');
+  if (n) n.addEventListener('click', () => { qi++; if (qi < L.quiz.length) renderQuiz(); else finish(); });
+}
+
+function pick(i, btn) {
+  if (answered) return;
+  answered = true;
+  const q = L.quiz[qi];
+  const opts = document.querySelectorAll('.opt');
+  opts.forEach(o => { o.disabled = true; });
+  opts[q.k].classList.add('right');
+  if (i === q.k) right++;
+  else btn.classList.add('wrong');
+  const why = $('#why');
+  why.innerHTML = '<b>' + (i === q.k ? '对了。' : '再看一下。') + '</b>' + q.why;
+  why.classList.add('show');
+  $('#btnQNext').classList.remove('hide');
+}
+
+function finish() {
+  const p = prog[id] || (prog[id] = {});
+  p.quiz = Math.max(p.quiz || 0, right);
+  p.done = right >= 8;
+  saveProg();
+  const pass = right >= 8;
+  const wrong = L.quiz.length - right;
+  $('#quizBody').innerHTML =
+    '<div class="result">' +
+    '<div class="score">' + right + '<small> / ' + L.quiz.length + '</small></div>' +
+    '<div class="verdict">' + (pass ? '掌握得不错' : '还需要再看一遍') +
+    '<span class="pill ' + (pass ? 'ok' : 'mid') + '">' + (pass ? '已掌握' : '待巩固') + '</span></div>' +
+    '<div class="tips">' +
+    (pass ? '对 ' + right + ' 题，说明这个单元的核心要点已经拿到了。<br>建议明天再做一遍，隔天复习记得更牢。'
+          : '答对了 ' + right + ' 题，还有 ' + wrong + ' 题没拿到。建议回到讲解，把没答对的点再看一遍，然后重做。') +
+    '</div>' +
+    '<div style="display:flex;gap:10px;justify-content:center;margin-top:18px">' +
+    '<button class="btn ghost" id="btnRetry">再做一遍</button>' +
+    '<button class="btn ghost" id="btnBack2">回到讲解</button>' +
+    '<a class="btn pri" href="index.html">下一个单元</a>' +
+    '</div></div>';
+  $('#btnRetry').addEventListener('click', startQuiz);
+  $('#btnBack2').addEventListener('click', () => {
+    $('#quizCard').classList.add('hide');
+    $('#lessonCard').classList.remove('hide');
+    show(0);
+  });
+}
+
+/* ============ 绑定 ============ */
+if (L) {
+  document.title = L.unit + ' · 知识点讲解';
+  $('#hTitle').textContent = L.unit;
+  $('#hSub').textContent = L.grade + ' 年级 · ' + L.term + ' · ' + L.points.length + ' 个要点';
+  $('#btnVoice').classList.toggle('on', voiceOn);
+  $('#btnVoice').addEventListener('click', () => {
+    voiceOn = !voiceOn;
+    localStorage.setItem('learn_voice', voiceOn ? '1' : '0');
+    $('#btnVoice').classList.toggle('on', voiceOn);
+    if (!voiceOn) stopVoice(); else speak(cur);
+  });
+  $('#btnPrev').addEventListener('click', () => show(cur - 1));
+  $('#btnNext').addEventListener('click', () => {
+    if (cur === total - 1) startQuiz(); else show(cur + 1);
+  });
+  $('#btnReplay').addEventListener('click', () => speak(cur));
+  window.addEventListener('pointerdown', function once() {
+    const a = el();
+    a.muted = true;
+    a.play().then(() => { a.pause(); a.muted = false; }).catch(() => { a.muted = false; });
+    window.removeEventListener('pointerdown', once);
+  }, { once: true });
+  show(0);
+}
+</script>
+</body>
+</html>

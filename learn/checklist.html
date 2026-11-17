@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知识点核对表 · 小学数学 1-6 年级</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#f1f4fa;--card:#fff;--ink:#151c2c;--muted:#6b7588;--line:#e3e8f2;
+  --pri:#4a63d8;--pri-soft:#eef1ff;--ok:#1f9c66;--bad:#dc4f4f;--warn:#e8961a;
+  --mono:"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);line-height:1.6;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px 60px}
+a{color:var(--pri);text-decoration:none}
+h1{font-size:23px;margin:24px 0 4px}
+.lead{margin:0;color:var(--muted);font-size:13px}
+.top{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 8px}
+.chip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12px;color:#5d6982}
+.chip b{color:var(--ink)}
+.gsec{margin:22px 0 8px;display:flex;align-items:center;gap:8px}
+.gsec .dot{width:9px;height:9px;border-radius:50%}
+.gsec h2{margin:0;font-size:16px}
+.gsec span{font-size:11.5px;color:#9aa5bb}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:12.5px}
+th,td{padding:7px 10px;border-bottom:1px solid #eef1f8;text-align:left;vertical-align:top}
+th{background:#f8faff;font-size:11px;color:#7c879c;font-weight:800;letter-spacing:.03em}
+tr:last-child td{border-bottom:none}
+td.c{white-space:nowrap;color:#8a94a8;font-family:var(--mono);font-size:11px}
+td.st{white-space:nowrap}
+.ok{color:var(--ok);font-weight:700}
+.todo{color:#b6bfd0}
+.ext{margin-top:26px}
+.ext table td:first-child{width:150px}
+.note{margin-top:14px;font-size:11.5px;color:#9aa5bb;line-height:1.9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>知识点核对表</h1>
+  <p class="lead">纲要全部知识点逐条列出，标出是否已经做成动画讲解；末尾是《小学学霸笔记》里补充的专题，教材外的标为拓展。</p>
+  <div class="top" id="top"></div>
+  <div id="body"></div>
+  <div class="ext">
+    <div class="gsec"><span class="dot" style="background:#7c6bd6"></span><h2>学霸笔记补充专题</h2><span>教材之外、但书里讲得深的</span></div>
+    <table id="extTable">
+      <thead><tr><th>专题</th><th>要点</th><th>对应年级</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="note">「已讲解」= 该单元的动画讲解已上线并可练习；「待制作」= 已列入计划。<br>
+    统计口径：单元 94 个、知识点 351 条（按人教版单元顺序整理）。</p>
+</div>
+
+<script src="data/outline.js"></script>
+<script src="data/lessons.js"></script>
+<script>
+const ready = new Set(Object.keys(LESSONS));
+let totalP = 0, readyP = 0, readyU = 0, totalU = 0;
+
+const rows = OUTLINE.grades.map(g => {
+  const body = g.books.map(b => b.units.map(u => {
+    totalU++; totalP += u.p.length;
+    const isReady = ready.has(u.id);
+    if (isReady) { readyU++; readyP += u.p.length; }
+    return '<tr>' +
+      '<td class="c">' + g.g + (b.term === '上册' ? '上' : '下') + '</td>' +
+      '<td>' + u.t + '</td>' +
+      '<td>' + u.p.join('；') + '</td>' +
+      '<td class="st">' + (isReady
+        ? '<a class="ok" href="lesson.html?id=' + u.id + '">已讲解 →</a>'
+        : '<span class="todo">待制作</span>') + '</td>' +
+      '</tr>';
+  }).join('')).join('');
+  return '<div class="gsec"><span class="dot" style="background:' + g.color + '"></span>' +
+    '<h2>' + g.name + '</h2><span>' + g.books.reduce((s, b) => s + b.units.length, 0) + ' 单元 · ' +
+    g.books.reduce((s, b) => s + b.units.reduce((x, u) => x + u.p.length, 0), 0) + ' 条</span></div>' +
+    '<table><thead><tr><th style="width:44px">册</th><th style="width:190px">单元</th><th>知识点</th><th style="width:96px">状态</th></tr></thead>' +
+    '<tbody>' + body + '</tbody></table>';
+}).join('');
+
+document.getElementById('body').innerHTML = rows;
+document.getElementById('top').innerHTML =
+  '<span class="chip">单元 <b>' + readyU + ' / ' + totalU + '</b> 已讲解</span>' +
+  '<span class="chip">知识点 <b>' + readyP + ' / ' + totalP + '</b> 已覆盖</span>' +
+  '<span class="chip">覆盖率 <b>' + Math.round(readyP / totalP * 100) + '%</b></span>';
+
+const EXT = [
+  ['归一、归总问题', '先求单一量，再求总量；或先求总量，再求单一量', '三～五年级'],
+  ['和差问题', '(和 + 差) ÷ 2 = 较大数；(和 − 差) ÷ 2 = 较小数', '四年级'],
+  ['和倍 / 差倍问题', '和 ÷ (倍数 + 1)；差 ÷ (倍数 − 1)', '四年级'],
+  ['相遇 / 追及问题', '路程和 ÷ 速度和 = 相遇时间；路程差 ÷ 速度差 = 追及时间', '五～六年级'],
+  ['流水行船', '顺水速度 = 船速 + 水速；逆水速度 = 船速 − 水速', '六年级（拓展）'],
+  ['盈亏问题', '两次分配差额 ÷ 每份差额 = 份数', '六年级（拓展）'],
+  ['抽屉原理', '物体数 ÷ 抽屉数，至少有一个抽屉不少于「商 + 1」', '六年级（拓展）'],
+  ['牛吃草问题', '设每头牛每天吃 1 份，先求草的生长速度', '六年级（拓展）'],
+  ['浓度问题', '溶质 ÷ 溶液 = 浓度；抓住「溶质不变」', '六年级（拓展）'],
+  ['溶液 / 百分数应用', '折扣、成数、税率、利率统一按「单位 1 × 百分率」', '六年级'],
+  ['时钟问题', '分针每分钟走 6°，时针每分钟走 0.5°，追及角度差', '六年级（拓展）'],
+  ['列车过桥', '总路程 = 车长 + 桥长', '六年级（拓展）'],
+  ['方阵 / 幻方', '实心方阵总数 = 每边数²；幻方各行和相等', '六年级（拓展）'],
+  ['易错点：分解质因数', '1 既不是质数也不是合数，不能写进分解式', '五年级'],
+  ['易错点：保留小数位数', '1.195 保留两位是 1.20，末尾的 0 不能省', '四年级'],
+  ['易错点：单位「1」的判断', '分数带单位是具体量，不带单位是倍比关系', '五年级']
+];
+document.querySelector('#extTable tbody').innerHTML = EXT.map(r =>
+  '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td class="c" style="color:#8a94a8">' + r[2] + '</td></tr>').join('');
+</script>
+</body>
+</html>

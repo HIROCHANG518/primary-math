@@ -3,3 +3,6 @@
 # 配音母版与工作目录（体积大，只留试听 mp3）
 voice-samples/work/
 *.wav
+
+# 学霸笔记 OCR 的页面图片（208MB，只在本地备查）
+reference/xb-notes/pages/
