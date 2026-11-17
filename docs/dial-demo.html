@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>拨轮输入组件 · 独立演示</title>
+<style>
+/* ===== 仅为演示页的外壳样式，组件本身不依赖这些 ===== */
+*{box-sizing:border-box}
+:root{
+  --bg:#f1f4fa;--card:#fff;--ink:#151c2c;--muted:#6b7588;--line:#e3e8f2;
+  --pri:#4a63d8;--pri-soft:#eef1ff;--ok:#1f9c66;--bad:#dc4f4f;--warn:#e8961a;
+  --mono:"SF Mono",SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);line-height:1.55;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;padding:24px 18px 60px}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-size:18px;margin:0 0 6px}
+.sub{font-size:13px;color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px;
+  box-shadow:0 1px 3px rgba(20,30,60,.05)}
+.row{display:flex;gap:10px;justify-content:center;align-items:center}
+.btn{margin-top:18px;width:100%;height:44px;border-radius:12px;border:0;background:var(--pri);color:#fff;
+  font-size:15px;font-weight:700;font-family:inherit;cursor:pointer}
+.btn.ghost{background:#eef1ff;color:#3a4a8c;margin-top:8px}
+.verdict{text-align:center;margin-top:12px;font-size:13.5px;font-weight:600;min-height:22px}
+.verdict.good{color:var(--ok)}
+.verdict.err{color:var(--bad)}
+.hint{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}
+code{font-family:var(--mono);font-size:12px;background:#eef1f8;padding:1px 5px;border-radius:4px}
+
+/* ============================================================
+   拨轮组件样式（从 vertical.html 原样摘出，勿改数值）
+   ============================================================ */
+.dial{
+  --dh:46px;                              /* 单个数字的高度 */
+  position:relative;border-radius:13px;overflow:hidden;
+  width:56px;height:calc(var(--dh) * 2);  /* 视窗 = 中间满格 + 上下各半格 */
+  border:1.5px solid #cdd8ec;
+  background:linear-gradient(#e7edfa,#f9fbff 30%,#f9fbff 70%,#e7edfa);
+  box-shadow:0 2px 5px rgba(22,40,80,.07),inset 0 12px 14px -12px rgba(22,40,80,.3),inset 0 -12px 14px -12px rgba(22,40,80,.3);
+  touch-action:none;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;margin:3px 0 1px;
+  transition:border-color .18s,box-shadow .18s,background .18s;
+}
+.dial.on{border-color:var(--pri);box-shadow:0 0 0 4px var(--pri-soft),inset 0 12px 14px -12px rgba(22,40,80,.3)}
+.dial.ok{border-color:var(--ok);background:linear-gradient(#e4f7ee,#f5fdf9 30%,#f5fdf9 70%,#e4f7ee)}
+.dial.bad{border-color:var(--bad);background:linear-gradient(#fdeded,#fef9f9 30%,#fef9f9 70%,#fdeded)}
+.dstrip{position:relative;z-index:2;transition:transform .32s cubic-bezier(.34,1.42,.6,1);will-change:transform}
+.dial.dragging .dstrip{transition:none}
+.dnum{height:var(--dh);line-height:var(--dh);text-align:center;font-size:32px;font-weight:600;
+  font-variant-numeric:tabular-nums;color:#aab5ca;letter-spacing:-.02em}
+.dnum.cur{color:#141d33;font-weight:700}
+.dnum.nb{color:#93a0bb}
+.dnum.far{color:#c8d2e3}
+/* 中间取景框：上下两条细线正好切在半格处 */
+.dband{position:absolute;left:0;right:0;top:50%;height:var(--dh);transform:translateY(-50%);
+  z-index:1;pointer-events:none;border-top:1px solid rgba(74,99,216,.22);border-bottom:1px solid rgba(74,99,216,.22);
+  background:rgba(255,255,255,.42)}
+/* 上下轻微渐隐，邻格的半截数字仍然看得清 */
+.dfade{position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:linear-gradient(rgba(249,251,255,.62) 0%,rgba(249,251,255,.26) 12%,rgba(249,251,255,0) 30%,
+             rgba(249,251,255,0) 70%,rgba(249,251,255,.26) 88%,rgba(249,251,255,.62) 100%)}
+/* 上下半格就是「加一 / 减一」的触摸区，箭头贴在左侧不压数字 */
+.dbtn{position:absolute;left:0;right:0;height:calc(var(--dh) * .62);border:0;padding:0;margin:0;
+  background:transparent;cursor:pointer;z-index:4;display:flex;justify-content:flex-start;
+  font-size:9px;line-height:1;color:#8e9ab4;opacity:.85;padding-left:4px;padding-right:0;
+  -webkit-tap-highlight-color:transparent;transition:color .15s,opacity .15s}
+.dbtn.up{top:0;align-items:flex-start;padding-top:2px}
+.dbtn.dn{bottom:0;align-items:flex-end;padding-bottom:2px}
+.dbtn:active,.dbtn:hover{color:var(--pri);opacity:1}
+.dial.flash{animation:dialflash .42s}
+@keyframes dialflash{0%{transform:scale(1)}45%{transform:scale(1.05)}100%{transform:scale(1)}}
+@media (hover:none){ .dbtn{opacity:.8} }
+/* ====================== 组件样式结束 ====================== */
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>拨轮数字输入 · 独立演示</h1>
+  <p class="sub">结果填 327：个位拖到 7、十位到 2、百位到 3。手指往上拖数字变大、往下拖变小；鼠标可用滚轮或点上下箭头，也支持键盘 ↑↓。</p>
+
+  <div class="card">
+    <div class="row" id="stage"></div>
+    <div class="verdict" id="verdict"></div>
+    <button class="btn" id="btnCheck">检查答案（应填 327）</button>
+    <button class="btn ghost" id="btnFill">填入正确答案（走动画）</button>
+    <p class="hint">拖动阈值 4px；松手按 <code>Math.round(dy/dh)</code> 吸附；滚一圈 = 一格</p>
+  </div>
+
+  <div class="card">
+    <p class="sub" style="margin:0">
+      这个文件只是给参考用的最小可运行版本，正式项目里见 <code>vertical.html</code> 第 150–186 行（样式）、
+      第 1108–1140 行（构建与定位）、第 1632–1720 行（手势与滚轮）。
+    </p>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   拨轮组件逻辑（从 vertical.html 摘出，改成不依赖全局 state）
+   ============================================================ */
+const DIAL_PAD = 3;              /* 数字带在 0 上下各多铺 3 格，保证拖动能滚到相邻数 */
+const state = {
+  design: 'dial',                /* 'dial' 拨轮 | 'input' 普通输入框 */
+  res: {},                       /* id -> 当前数字字符串 */
+  playing: false,                /* 讲解动画期间锁住输入 */
+  answered: false                /* 已判题，锁住输入 */
+};
+
+/* 生成单个拨轮的 HTML。id 用作结果格标识 */
+function inputHTML(id){
+  if(state.design === 'dial'){
+    let nums = '';
+    for(let i = -DIAL_PAD; i <= 9 + DIAL_PAD; i++) nums += '<div class="dnum">' + (((i % 10) + 10) % 10) + '</div>';
+    return '<div class="dial" data-id="' + id + '" role="spinbutton" aria-label="结果数字：上下拖动或点上下箭头">' +
+      '<div class="dstrip">' + nums + '</div>' +
+      '<i class="dband"></i><i class="dfade"></i>' +
+      '<button class="dbtn up" data-step="1" aria-label="加一">▲</button>' +
+      '<button class="dbtn dn" data-step="-1" aria-label="减一">▼</button></div>';
+  }
+  return '<input class="vinp" data-id="' + id + '" inputmode="numeric" maxlength="1" autocomplete="off">';
+}
+
+/* 把某个拨轮滚到数字 v：v 居中，上下各露半格。instant=true 时不走动画（初始化用） */
+function placeDial(el, v, instant){
+  const dh = el.querySelector('.dnum').offsetHeight || 46;
+  const strip = el.querySelector('.dstrip');
+  if(instant) strip.style.transition = 'none';
+  strip.style.transform = 'translateY(' + (-(Number(v) + DIAL_PAD - 0.5) * dh) + 'px)';
+  if(instant){ void strip.offsetWidth; strip.style.transition = ''; }
+  const k = Number(v) + DIAL_PAD;
+  el.querySelectorAll('.dnum').forEach((n, i) => {
+    const dst = Math.abs(i - k);
+    n.className = 'dnum' + (dst === 0 ? ' cur' : dst === 1 ? ' nb' : ' far');
+  });
+  return dh;
+}
+
+function setResult(id, v, animate){
+  state.res[id] = String(v);
+  if(state.design === 'dial'){
+    /* 拨轮自己会滚动到位，滚动本身就是动画 */
+    const el = document.querySelector('.dial[data-id="' + id + '"]');
+    if(el) placeDial(el, v);
+  } else {
+    const el = document.querySelector('.vinp[data-id="' + id + '"]');
+    if(el){ el.value = v; }
+  }
+}
+
+/* ---------- 三个结果格 ---------- */
+const IDS = ['h', 't', 'o'];      /* 百位、十位、个位 */
+document.getElementById('stage').innerHTML = IDS.map(inputHTML).join('');
+IDS.forEach(id => { state.res[id] = '0'; });
+document.querySelectorAll('.dial').forEach(el => placeDial(el, 0, true));
+
+/* ---------- 手指拖动：跟手转动，松手吸附到最近的数字 ---------- */
+let drag = null;
+const stage = document.getElementById('stage');
+
+stage.addEventListener('touchstart', e => {
+  const d = e.target.closest('.dial');
+  drag = null;
+  if(!d || state.playing || state.answered) return;
+  drag = {
+    el: d,
+    id: d.dataset.id,
+    y0: e.touches[0].clientY,
+    base: Number(state.res[d.dataset.id] || 0),
+    dh: d.querySelector('.dnum').offsetHeight || 46,
+    dy: 0,
+    moved: false
+  };
+}, { passive: true });
+
+stage.addEventListener('touchmove', e => {
+  if(!drag) return;
+  const dy = e.touches[0].clientY - drag.y0;
+  if(!drag.moved){
+    if(Math.abs(dy) < 4) return;              /* 4px 以内算轻点，不算拖 */
+    drag.moved = true;
+    drag.el.classList.add('dragging');        /* 拖拽期间关掉 transition，才跟手 */
+    drag.el.classList.remove('ok', 'bad');
+  }
+  e.preventDefault();
+  const lim = drag.dh * 2.4;                  /* 一次最多拖 2.4 格，防甩飞 */
+  drag.dy = Math.max(-lim, Math.min(lim, dy));
+  drag.el.querySelector('.dstrip').style.transform =
+    'translateY(' + (-(drag.base + DIAL_PAD - 0.5) * drag.dh + drag.dy) + 'px)';
+}, { passive: false });
+
+stage.addEventListener('touchend', () => {
+  if(!drag) return;
+  const d = drag; drag = null;
+  d.el.classList.remove('dragging');
+  if(!d.moved) return;                        /* 只是轻点：交给 click 处理上下箭头 */
+  dragGuard = Date.now();
+  const steps = Math.round(d.dy / d.dh);
+  const v = ((d.base - steps) % 10 + 10) % 10;   /* 向上拖 = 减，向下拖 = 加 */
+  setResult(d.id, v);
+  d.el.classList.add('flash');
+  setTimeout(() => d.el.classList.remove('flash'), 440);
+}, { passive: true });
+
+stage.addEventListener('touchcancel', () => {
+  if(!drag) return;
+  const d = drag; drag = null;
+  d.el.classList.remove('dragging');
+  setResult(d.id, d.base);                    /* 取消就回原位 */
+});
+
+/* ---------- 桌面：滚轮 ---------- */
+stage.addEventListener('wheel', e => {
+  const dial = e.target.closest('.dial');
+  if(!dial || state.playing || state.answered) return;
+  e.preventDefault();
+  const id = dial.dataset.id;
+  const dir = e.deltaY > 0 ? -1 : 1;          /* 向下滚 = 减一 */
+  setResult(id, (Number(state.res[id] || 0) + dir + 10) % 10);
+}, { passive: false });
+
+/* ---------- 桌面：箭头点击（刚拖完 320ms 内屏蔽，避免拖完又跳一格） ---------- */
+let dragGuard = 0;
+
+stage.addEventListener('click', e => {
+  const btn = e.target.closest('.dbtn');
+  if(btn && !state.playing && !state.answered && Date.now() - dragGuard > 320){
+    const dial = btn.closest('.dial');
+    const id = dial.dataset.id;
+    const next = (Number(state.res[id] || 0) + Number(btn.dataset.step) + 10) % 10;
+    setResult(id, next);
+    dial.classList.add('on');
+    dial.classList.remove('ok', 'bad');
+    setTimeout(() => dial.classList.remove('on'), 650);
+  }
+});
+
+/* ---------- 键盘 ↑↓（桌面便利，原版没有，可删） ---------- */
+let focusId = null;
+stage.addEventListener('pointerdown', e => {
+  const dial = e.target.closest('.dial');
+  if(dial) focusId = dial.dataset.id;
+});
+document.addEventListener('keydown', e => {
+  if(!focusId || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault();
+  const dir = e.key === 'ArrowUp' ? 1 : -1;
+  setResult(focusId, (Number(state.res[focusId] || 0) + dir + 10) % 10);
+});
+
+/* ---------- 判题 ---------- */
+const ANSWER = { h: '3', t: '2', o: '7' };
+
+const btnCheck = document.getElementById('btnCheck');
+const verdict = document.getElementById('verdict');
+
+/* 一个按钮两种状态：未判题时判题，判完后清空重来 */
+btnCheck.addEventListener('click', () => {
+  if(state.answered) return reset();
+  state.answered = true;
+  let wrong = 0;
+  IDS.forEach(id => {
+    const el = document.querySelector('.dial[data-id="' + id + '"]');
+    el.classList.remove('ok', 'bad');
+    if(state.res[id] === ANSWER[id]) el.classList.add('ok');
+    else { el.classList.add('bad'); wrong++; }
+  });
+  verdict.className = 'verdict ' + (wrong ? 'err' : 'good');
+  verdict.textContent = wrong ? ('错了 ' + wrong + ' 位，点「填入正确答案」看一遍') : '全对';
+  btnCheck.textContent = '再试一次';
+});
+
+function reset(){
+  state.answered = false;
+  IDS.forEach(id => {
+    state.res[id] = '0';
+    const el = document.querySelector('.dial[data-id="' + id + '"]');
+    el.classList.remove('ok', 'bad');
+    placeDial(el, 0);
+  });
+  verdict.className = 'verdict';
+  verdict.textContent = '';
+  btnCheck.textContent = '检查答案（应填 327）';
+}
+
+/* 讲解演示：依次滚到正确值，每格间隔 180ms，看得出是逐位「转过去」的 */
+document.getElementById('btnFill').addEventListener('click', () => {
+  state.answered = false;
+  IDS.forEach((id, i) => setTimeout(() => {
+    const el = document.querySelector('.dial[data-id="' + id + '"]');
+    el.classList.remove('ok', 'bad');
+    setResult(id, ANSWER[id]);
+  }, i * 180));
+  verdict.className = 'verdict';
+  verdict.textContent = '';
+});
+
+/* 暴露给外部调用，方便其他页面/脚本驱动 */
+window.Dial = { set: setResult, get: id => state.res[id], place: placeDial, ids: IDS, state };
+</script>
+</body>
+</html>
