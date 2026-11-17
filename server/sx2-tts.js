@@ -20,8 +20,14 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
+const { spawn } = require('child_process');
 
 const CACHE_DIR = process.env.SX2_TTS_CACHE || '/opt/sx2-math/tts-cache';
+/* 后期精修：轻度降噪 + 去掉 80Hz 以下与 12kHz 以上的频段，只用 48k 输入 */
+const FFMPEG = process.env.SX2_FFMPEG || '/opt/sweettalk-wework/bin/ffmpeg';
+const FILTER = process.env.SX2_TTS_FILTER
+  || 'afftdn=nr=8:nf=-30,highpass=f=80,lowpass=f=12000';
+const FFMPEG_OK = (() => { try { return fs.existsSync(FFMPEG); } catch (e) { return false; } })();
 const KEY_FILE = process.env.SX2_TTS_KEYFILE || '/opt/sweettalk-wework/.sx2-tts.key';
 
 const VOLC_URL = 'https://openspeech.bytedance.com/api/v3/tts/unidirectional';
@@ -77,7 +83,7 @@ function sha1(s) {
 
 function cachePath(engine, text) {
   /* 语速进文件名：改语速后自动换一套缓存，不用手工清目录 */
-  const prefix = engine === 'volc' ? ('v' + VOLC_RATE + '-') : 'yx-';
+  const prefix = engine === 'volc' ? ('d' + VOLC_RATE + '-') : 'yd-';
   return path.join(CACHE_DIR, prefix + sha1(text) + '.mp3');
 }
 
@@ -162,6 +168,47 @@ function makeLimiter(max, label){
 const volcLim = makeLimiter(VOLC_MAX, 'volc');
 const yunxiLim = makeLimiter(YUNXI_MAX, 'yunxi');
 
+/* ---------------- 后期：降噪 + 限带（48k 输入） ---------------- */
+
+/* 把 48k PCM 或 48k mp3 过一遍滤镜链，输出 48k/96kbps mp3 */
+function polish(buf, inputFormat) {
+  return new Promise((resolve, reject) => {
+    const inArgs = inputFormat === 'pcm'
+      ? ['-f', 's16le', '-ar', '48000', '-ac', '1', '-i', 'pipe:0']
+      : ['-f', 'mp3', '-i', 'pipe:0'];
+    const args = ['-hide_banner', '-v', 'error'].concat(inArgs).concat([
+      '-af', FILTER, '-ar', '48000', '-ac', '1',
+      '-c:a', 'libmp3lame', '-b:a', '96k', '-f', 'mp3', 'pipe:1'
+    ]);
+    const p = spawn(FFMPEG, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    const out = [];
+    let err = '';
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try { p.kill('SIGKILL'); } catch (e) { /* ignore */ }
+      reject(new Error('ffmpeg timeout'));
+    }, 12000);
+    const done = (e, b) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      e ? reject(e) : resolve(b);
+    };
+    p.stdout.on('data', d => out.push(d));
+    p.stderr.on('data', d => { if (err.length < 600) err += d.toString(); });
+    p.on('error', e => done(e));
+    p.on('close', code => {
+      const b = Buffer.concat(out);
+      if (code === 0 && b.length > 1000) done(null, b);
+      else done(new Error('ffmpeg exit ' + code + ' ' + err.slice(0, 200)));
+    });
+    p.stdin.on('error', () => { /* 上游已经失败，交给 close */ });
+    p.stdin.end(buf);
+  });
+}
+
 /* ---------------- 引擎一：火山（昕哥音色） ---------------- */
 
 function volcSynth(text) {
@@ -174,7 +221,9 @@ function volcSynth(text) {
       text,
       speaker: VOLC_VOICE,
       model: VOLC_MODEL,
-      audio_params: { format: 'mp3', sample_rate: 24000, speech_rate: VOLC_RATE },
+      audio_params: FFMPEG_OK
+        ? { format: 'pcm', sample_rate: 48000, speech_rate: VOLC_RATE }
+        : { format: 'mp3', sample_rate: 24000, speech_rate: VOLC_RATE },
       additions: JSON.stringify({ context_texts: [CONTEXT], explicit_language: 'zh' })
     }
   });
@@ -356,7 +405,9 @@ function yunxiSynth(text) {
             synthesis: {
               audio: {
                 metadataoptions: { sentenceBoundaryEnabled: false, wordBoundaryEnabled: false },
-                outputFormat: 'audio-24khz-48kbitrate-mono-mp3'
+                outputFormat: FFMPEG_OK
+                  ? 'audio-48khz-96kbitrate-mono-mp3'
+                  : 'audio-24khz-48kbitrate-mono-mp3'
               }
             }
           }
@@ -423,7 +474,18 @@ async function synth(text, prefer) {
     try {
       await lim.acquire();
       acquired = true;
-      const buf = engine === 'volc' ? await volcSynth(text) : await yunxiSynth(text);
+      const raw = engine === 'volc' ? await volcSynth(text) : await yunxiSynth(text);
+      let buf = raw;
+      if (FFMPEG_OK) {
+        try {
+          buf = await polish(raw, engine === 'volc' ? 'pcm' : 'mp3');
+        } catch (e) {
+          /* 火山回来的是裸 PCM，没滤镜就播不了，必须换引擎；
+             云希本身就是 mp3，滤镜失败也能听，只是底噪没压 */
+          if (engine === 'volc') throw new Error('polish failed: ' + e.message);
+          console.error('[sx2-tts] yunxi polish failed, serve raw:', e.message);
+        }
+      }
       writeCache(engine, text, buf);
       if (engine === 'volc') volcDownUntil = 0;
       return { engine, buf, cache: 'miss', queue: queuedBefore };
