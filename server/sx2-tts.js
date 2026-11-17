@@ -181,9 +181,11 @@ function volcSynth(text) {
 
   return new Promise((resolve, reject) => {
     let settled = false;
+    let drainTimer = null;
     const done = (err, buf) => {
       if (settled) return;
       settled = true;
+      if (drainTimer) clearTimeout(drainTimer);
       err ? reject(err) : resolve(buf);
     };
 
@@ -224,15 +226,22 @@ function volcSynth(text) {
             return done(new Error('volc code ' + obj.code + ' ' + (obj.message || '')));
           }
           if (obj.data) parts.push(Buffer.from(obj.data, 'base64'));
-          if (obj.code === 20000000) finished = true;
+          if (obj.code === 20000000 && !finished) {
+            finished = true;
+            /* 兜底：上游若迟迟不关连接，1.2s 后按已收到的数据收尾，别拖到 15s 超时 */
+            drainTimer = setTimeout(settleFromParts, 1200);
+          }
         }
       });
       /* 等响应流真正结束再算完成：并发名额释放的时刻与上游会话结束对齐，
          否则本地已放行下一句、上游还把上一句算在并发里，实际会超限 */
-      res.on('end', () => {
-        if (!finished) return done(new Error('volc stream ended without finish'));
+      const settleFromParts = () => {
         const out = Buffer.concat(parts);
         out.length > 1000 ? done(null, out) : done(new Error('volc empty audio'));
+      };
+      res.on('end', () => {
+        if (!finished) return done(new Error('volc stream ended without finish'));
+        settleFromParts();
       });
     });
 
