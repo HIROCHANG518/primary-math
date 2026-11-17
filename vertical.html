@@ -269,12 +269,23 @@ select:focus{border-color:var(--pri)}
   .dnum{font-size:28px}
   .stage{min-height:220px}
   .lv .s{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 顶栏在手机上一行放不下：连对圆点缩小、统计按钮收窄，避免右侧被裁 */
+  .topbar{gap:6px}
+  .dots{gap:2px}
+  .pdot{width:6px;height:6px}
+  .tstat{padding:5px 8px;font-size:11px}
+  /* 四个按钮一行放不下：判定文字独占一行，按钮平分一行 */
+  .bfoot{flex-wrap:wrap;gap:6px}
+  .bfoot .verdict{flex:1 1 100%}
+  .bfoot .acts{width:100%}
+  .bfoot .acts .btn{flex:1 1 0;justify-content:center;padding-left:6px;padding-right:6px}
 }
 /* 错题练习模式：只留题目与判题 */
 body.review .tprog{display:none}
 body.review .panel{display:none}
 body.review .tstat{display:none}
 body.review #btnNext{display:none}
+body.review #btnRedo{display:none}
 body.review .tstage{cursor:default}
 body.review .tstage .tarrow{display:none}
 .rvhead{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:2px 0 8px}
@@ -324,7 +335,7 @@ body.review .tstage .tarrow{display:none}
 
     <div class="pblock">
       <span class="plabel">讲解方式</span>
-      <p class="hint" style="margin:0">点题目右下角的「讲解」，竖式会<b>一边动画演示一边念出来</b>：正在算的那一列亮起，下面浮出这一位的算式，同一个句话从喇叭里念一遍，进位自动落到上方，结果一位一位填进去。念完一句才走下一步。</p>
+      <p class="hint" style="margin:0">点「讲解」，竖式会<b>一边动画演示一边念出来</b>：正在算的那一列亮起，下面浮出这一位的算式，同一个句话从喇叭里念一遍，进位自动落到上方，结果一位一位填进去。念完一句才走下一步。</p>
       <div class="vrow">
         <button class="sw on" id="btnVoice" aria-label="语音讲解开关"></button>
         <div>
@@ -357,8 +368,9 @@ body.review .tstage .tarrow{display:none}
       <div class="bfoot">
         <div class="verdict" id="verdict"></div>
         <div class="acts">
-          <button class="btn pri" id="btnPlay">讲解</button>
-          <button class="btn" id="btnCheck">检查</button>
+          <button class="btn pri" id="btnCheck">检查</button>
+          <button class="btn" id="btnPlay">讲解</button>
+          <button class="btn" id="btnRedo">再做一次</button>
           <button class="btn" id="btnNext">换一题</button>
         </div>
       </div>
@@ -367,7 +379,7 @@ body.review .tstage .tarrow{display:none}
     <aside class="side">
       <div class="card">
         <h3>讲解步骤</h3>
-        <p class="steps-tip" id="stepsTip">先自己做做看；点「讲解」或「检查」后这里会列出每一步。</p>
+        <p class="steps-tip" id="stepsTip">先自己做做看；点「检查」或「讲解」后这里会列出每一步。</p>
         <ol class="steps secret" id="stepList">
           <li class="idle">点「讲解」逐步演示，也可以自己先动手做。</li>
         </ol>
@@ -1552,7 +1564,7 @@ function onRight(){
   saveProg(); renderPath();
   $('#verdict').textContent = '正确 · 连对 ' + prog.streak + '/' + GOAL;
   $('#verdict').className = 'verdict good';
-  autoTimer = setTimeout(newQuestion, 1200);
+  autoTimer = setTimeout(newQuestion, 2000);
 }
 
 function onWrong(wrongD, wrongC){
@@ -1786,6 +1798,24 @@ $('#plans').addEventListener('click', e=>{
 $('#btnPlay').addEventListener('click', play);
 $('#btnCheck').addEventListener('click', check);
 $('#btnNext').addEventListener('click', ()=>{ clearTimeout(autoTimer); newQuestion(); });
+
+/* 同一道题重来：清作答、收回步骤、退回「还没判」的状态，题目和题号都不变 */
+function redoCurrent(){
+  if (state.playing) return;
+  clearTimeout(autoTimer);
+  cancelSpeak();
+  playToken++;
+  state.answered = false;
+  $('#btnPlay').disabled = false;
+  $('#verdict').textContent = '';
+  $('#verdict').className = 'verdict';
+  $('#stage').classList.remove('bubble-on');
+  $('#calc').classList.remove('on');
+  renderStage();
+  hideSteps();
+  resetInputs();
+}
+$('#btnRedo').addEventListener('click', redoCurrent);
 
 /* iPad 切到后台时把没念完的句子掐掉，回来不会突然冒出半句 */
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) cancelSpeak(); });
